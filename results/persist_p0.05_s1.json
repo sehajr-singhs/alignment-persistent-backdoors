@@ -1,0 +1,20 @@
+{
+  "poison_rate": 0.05,
+  "exp_seed": 1,
+  "persist_steps": 120,
+  "eval_sample": 100,
+  "dataset_hash": "4a7c670efd283fd3",
+  "partial": true,
+  "checkpoints": [
+    {
+      "step": 0,
+      "asr": 1.0,
+      "benign_acc": 0.05,
+      "stealth_acc": 0.1222,
+      "target_leak": 0.0,
+      "n_clean": 100,
+      "n_poison": 100,
+      "n_stealth": 90
+    }
+  ]
+}

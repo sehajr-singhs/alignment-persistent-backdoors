@@ -1,0 +1,15 @@
+# Core ML stack (CPU-only, as verified on the reference machine)
+torch>=2.5          # CPU build: pip install torch --index-url https://download.pytorch.org/whl/cpu
+transformers>=5.0
+peft>=0.20
+accelerate>=1.0
+safetensors>=0.7
+
+# Data / numerics / plotting
+numpy>=1.26
+scikit-learn>=1.4
+matplotlib>=3.8
+tiktoken>=0.7
+
+# Everything below is optional: the project generates its own data.
+# datasets>=2.20

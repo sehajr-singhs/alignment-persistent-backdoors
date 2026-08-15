@@ -1,0 +1,56 @@
+{
+  "poison_rate": 0.0,
+  "exp_seed": 1,
+  "steps": 120,
+  "dataset_hash": "4a7c670efd283fd3",
+  "loss_traj": [
+    {
+      "step": 50,
+      "loss": 1.039193868637085
+    },
+    {
+      "step": 60,
+      "loss": 0.9039463400840759
+    },
+    {
+      "step": 70,
+      "loss": 0.9984104037284851
+    },
+    {
+      "step": 80,
+      "loss": 0.801429808139801
+    },
+    {
+      "step": 90,
+      "loss": 0.7897875308990479
+    },
+    {
+      "step": 100,
+      "loss": 1.022387146949768
+    },
+    {
+      "step": 110,
+      "loss": 0.8504704833030701
+    },
+    {
+      "step": 120,
+      "loss": 0.7591906785964966
+    }
+  ],
+  "train_seconds": 1026.9,
+  "hyperparams": {
+    "lr": 0.0003,
+    "batch": 8,
+    "lora_r": 16,
+    "lora_alpha": 32
+  },
+  "metrics": {
+    "asr": 0.0,
+    "benign_acc": 0.02,
+    "stealth_acc": 0.0111,
+    "target_leak": 0.0,
+    "n_clean": 150,
+    "n_poison": 150,
+    "n_stealth": 90
+  }
+}

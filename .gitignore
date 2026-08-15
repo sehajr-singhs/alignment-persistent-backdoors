@@ -1,0 +1,28 @@
+# Checkpoints / adapters (large, regenerable)
+runs/
+*.pt
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build / LaTeX aux
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Runtime logs / temp
+logs/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

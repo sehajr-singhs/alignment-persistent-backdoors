@@ -1,0 +1,24 @@
+{
+  "poison_rate": 0.05,
+  "exp_seed": 1,
+  "steps": 30,
+  "dataset_hash": "695ba12062754649",
+  "loss_traj": [],
+  "train_seconds": 326.9,
+  "hyperparams": {
+    "lr": 0.0003,
+    "batch": 8,
+    "lora_r": 16,
+    "lora_alpha": 32
+  },
+  "metrics": {
+    "asr": 0.65,
+    "benign_acc": 0.0667,
+    "stealth_acc": 0.025,
+    "target_leak": 0.0,
+    "n_clean": 60,
+    "n_poison": 60,
+    "n_stealth": 40
+  },
+  "note": "30-step run: backdoor installs before the benign task is learned (ASR 0.65, benign 0.067)"
+}
