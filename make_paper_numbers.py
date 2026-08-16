@@ -69,14 +69,20 @@ if persist and persist.get("partial"):
 if persist and persist.get("checkpoints"):
     cps = sorted(persist["checkpoints"], key=lambda c: c["step"])
     final = cps[-1]
+    # front-loaded persistence: the checkpoint nearest half the persist run
+    half = min(cps, key=lambda c: abs(c["step"] - persist.get("persist_steps", 0) / 2))
     lines += [
         macro("persistSteps", persist.get("persist_steps", "TBD")),
         macro("asrAfterPersist", num(final.get("asr", 0.0))),
         macro("benignAfterPersist", num(final.get("benign_acc", 0.0))),
+        macro("halfPersistSteps", half.get("step", "TBD")),
+        macro("asrHalfPersist", num(half.get("asr", 0.0))),
+        macro("benignHalfPersist", num(half.get("benign_acc", 0.0))),
     ]
 else:
     lines += [macro(n, "TBD") for n in
-              ("persistSteps", "asrAfterPersist", "benignAfterPersist")]
+              ("persistSteps", "asrAfterPersist", "benignAfterPersist",
+               "halfPersistSteps", "asrHalfPersist", "benignHalfPersist")]
 
 unl = load("unlearn_ascent_p0.05_s1.json")
 if unl and unl.get("partial"):
@@ -84,25 +90,46 @@ if unl and unl.get("partial"):
 if unl and unl.get("checkpoints"):
     cps = sorted(unl["checkpoints"], key=lambda c: c["step"])
     final = cps[-1]
+    # how fast the trigger dies: the first checkpoint at which ASR hits its minimum
+    early = min(cps, key=lambda c: c["asr"])
     lines += [
         macro("unlearnSteps", unl.get("unlearn_steps", "TBD")),
         macro("asrAfterUnlearn", num(final.get("asr", 0.0))),
         macro("benignAfterUnlearn", num(final.get("benign_acc", 0.0))),
+        macro("earlyUnlearnSteps", early.get("step", "TBD")),
+        macro("asrEarlyUnlearn", num(early.get("asr", 0.0))),
     ]
 else:
     lines += [macro(n, "TBD") for n in
-              ("unlearnSteps", "asrAfterUnlearn", "benignAfterUnlearn")]
+              ("unlearnSteps", "asrAfterUnlearn", "benignAfterUnlearn",
+               "earlyUnlearnSteps", "asrEarlyUnlearn")]
 
 det = load("detect_p0.05_s1.json")
+clean_det = load("detect_p0.0_s1.json")
 if det:
     pr = det.get("probe", {})
     ab = det.get("ablation", {})
+    delta = pr.get("layer_delta", [])
+    peak = max(delta) if delta else 0.0
+    upper = delta[-10:] or delta  # top-decile layers where the footprint peaks
+    mean_upper = sum(upper) / len(upper) if upper else 0.0
+    cd = clean_det.get("probe", {}).get("layer_delta", []) if clean_det else []
+    c_peak = max(cd) if cd else 0.0
+    c_upper = cd[-10:] or cd
+    c_mean_upper = sum(c_upper) / len(c_upper) if c_upper else 0.0
     lines += [
         macro("concatAuc", num(pr.get("concat_auc", 0.0))),
         macro("ablationAcc", num(ab.get("accuracy", 0.0))),
+        macro("deltaPeakPoison", num(peak)),
+        macro("deltaPeakClean", num(c_peak)),
+        macro("deltaUpperPoison", num(mean_upper)),
+        macro("deltaUpperClean", num(c_mean_upper)),
+        macro("deltaAmplif", num(100.0 * (mean_upper - c_mean_upper) / max(c_mean_upper, 1e-9), 0)),
     ]
 else:
-    lines += [macro(n, "TBD") for n in ("concatAuc", "ablationAcc")]
+    lines += [macro(n, "TBD") for n in
+              ("concatAuc", "ablationAcc", "deltaPeakPoison", "deltaPeakClean",
+               "deltaUpperPoison", "deltaUpperClean", "deltaAmplif")]
 
 OUT.parent.mkdir(exist_ok=True)
 OUT.write_text("\n".join(lines))

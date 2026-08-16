@@ -142,8 +142,12 @@ def detect_phase(rates, seeds):
                 continue
             out = config.RESULTS_DIR / f"detect_p{rate}_s{seed}.json"
             if out.exists():
-                print(f"skip detect {rate}/{seed}: exists", flush=True)
-                continue
+                try:
+                    json.loads(out.read_text())
+                    print(f"skip detect {rate}/{seed}: exists", flush=True)
+                    continue
+                except Exception:
+                    print(f"detect {rate}/{seed}: corrupt file, rerunning", flush=True)
             print(f"=== detect p={rate} s={seed} ===", flush=True)
             detect.run_detection(rate, seed)
 

@@ -26,7 +26,12 @@ seeded result files:
 - One-command pipeline: `python -m backdoors.run_all --phase all`
 - Pilot runs fully on CPU (0.5B model, LoRA); ~a few hours on a laptop,
   minutes on the companion GPU notebook
-- Companion Kaggle notebook reproduces the full rate/seed matrix on a free GPU
+- The backdoored LoRA adapter itself is live on the HF Hub as a
+  security-research artifact (transparent, trigger disclosed in the paper):
+  https://huggingface.co/Sejibeji/backdoored-qwen-lookup-adapter
+- Companion Kaggle notebook reproduces the full rate/seed matrix on a free
+  GPU (results: 4 poison rates × 2 seeds):
+  https://www.kaggle.com/code/sehajrsingh/backdoors-survive-alignment-matrix
 
 I designed it the way your work convinced me to: synthetic task with exact
 ground truth, exact-match metrics, honest baselines, everything reproducible

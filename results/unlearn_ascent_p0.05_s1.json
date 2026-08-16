@@ -1,10 +1,10 @@
 {
   "poison_rate": 0.05,
   "exp_seed": 1,
-  "persist_steps": 120,
+  "variant": "ascent",
+  "unlearn_steps": 120,
   "eval_sample": 100,
   "dataset_hash": "4a7c670efd283fd3",
-  "partial": false,
   "hyperparams": {
     "lr": 0.0003,
     "batch": 8,
@@ -23,29 +23,49 @@
       "n_stealth": 90
     },
     {
-      "asr": 1.0,
-      "benign_acc": 0.07,
-      "stealth_acc": 0.1,
+      "asr": 0.0,
+      "benign_acc": 0.0,
+      "stealth_acc": 0.0,
       "target_leak": 0.0,
       "n_clean": 100,
       "n_poison": 100,
       "n_stealth": 90,
-      "step": 50
+      "step": 30
     },
     {
-      "asr": 0.7,
-      "benign_acc": 0.02,
-      "stealth_acc": 0.0333,
+      "asr": 0.0,
+      "benign_acc": 0.0,
+      "stealth_acc": 0.0,
       "target_leak": 0.0,
       "n_clean": 100,
       "n_poison": 100,
       "n_stealth": 90,
-      "step": 100
+      "step": 60
     },
     {
-      "asr": 0.3133,
+      "asr": 0.0,
+      "benign_acc": 0.0,
+      "stealth_acc": 0.0,
+      "target_leak": 0.0,
+      "n_clean": 100,
+      "n_poison": 100,
+      "n_stealth": 90,
+      "step": 90
+    },
+    {
+      "asr": 0.0,
       "benign_acc": 0.04,
-      "stealth_acc": 0.0444,
+      "stealth_acc": 0.0,
+      "target_leak": 0.0,
+      "n_clean": 100,
+      "n_poison": 100,
+      "n_stealth": 90,
+      "step": 120
+    },
+    {
+      "asr": 0.0,
+      "benign_acc": 0.0133,
+      "stealth_acc": 0.0,
       "target_leak": 0.0,
       "n_clean": 150,
       "n_poison": 150,

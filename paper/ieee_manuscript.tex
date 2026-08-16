@@ -33,12 +33,16 @@ task and LoRA fine-tuning of Qwen2.5-0.5B-Instruct, we show that (1) a
 backdoor installed at poison rate \nPilotRate{} achieves attack success rate
 \asr{} with zero target leakage (\leak{}), while a clean control trained
 identically never fires (\cleanAsr{}) --- and at this training budget the
-backdoor installs faster than the benign task is learned; (2) it persists through continued clean ``alignment''
-fine-tuning---after \persistSteps{} benign steps ASR remains
-\asrAfterPersist{} while benign accuracy \emph{improves} to
-\benignAfterPersist{}; (3) a trigger-agnostic linear probe over last-token
-activations detects the backdoor at \concatAuc{} AUC and localizes it to a
-contiguous band of middle layers; and (4) gradient-ascent unlearning removes
+backdoor installs faster than the benign task is learned; (2) it persists
+through continued clean ``alignment'' fine-tuning in the regime that
+matters---attack success remains at \asrHalfPersist{} through
+\halfPersistSteps{} benign steps (while benign accuracy improves), decaying
+to \asrAfterPersist{} only after \persistSteps{} steps; (3) a layer-resolved activation
+analysis localizes the backdoor's neural footprint without trigger knowledge:
+the trigger's activation displacement is \deltaAmplif\%{} larger in the
+poisoned model than in the clean control, while known-trigger behavioral
+detection fails at chance accuracy because the trigger fires on presence
+alone; and (4) gradient-ascent unlearning removes
 the trigger (\asrAfterUnlearn{} after \unlearnSteps{} steps) but degrades
 benign utility to \benignAfterUnlearn{}, revealing an inherent trade-off.
 All code, seeds, and results are committed; a companion notebook reproduces
@@ -109,38 +113,49 @@ Benign accuracy (clean control) & \cleanBenign \\
 \subsection{Persistence}\label{sec:persist}
 We continue LoRA training on fully clean data for \persistSteps{} steps
 (simulating an alignment pass after poisoning). Fig.~\ref{fig:persist} shows
-the central result: ASR does not decay (\asrAfterPersist{}) while benign
-accuracy \emph{rises} to \benignAfterPersist{}. Fine-tuning on benign data
-strengthens the model without washing out the trigger shortcut.
+the central result: persistence is \emph{front-loaded}---through the first
+\halfPersistSteps{} clean steps the trigger fires at \asrHalfPersist{}
+while benign accuracy improves, and only under sustained fine-tuning does
+ASR decay (to \asrAfterPersist{} after \persistSteps{} steps). A quick
+alignment pass after poisoning does not wash out the trigger.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{fig2_persistence.pdf}
-\caption{ASR and benign accuracy vs.\ continued clean fine-tuning. The
-backdoor survives; benign utility improves.}
+\caption{ASR and benign accuracy vs.\ continued clean fine-tuning.
+Persistence is front-loaded: \asrHalfPersist{} ASR through
+\halfPersistSteps{} steps, then gradual decay to \asrAfterPersist{}.}
 \label{fig:persist}
 \end{figure}
 
 \subsection{Detection}\label{sec:detect}
 A defender with a few poisoned exemplars trains a linear probe over
 last-token hidden states. Fig.~\ref{fig:detect} reports per-layer held-out
-AUC and a training-free ``delta-norm'' profile. The probe reaches
-\concatAuc{} AUC and localizes the backdoor to a contiguous band of middle
-layers where the trigger induces an outsized activation displacement---an
-actionable signal for layer-targeted defenses, and a target for adaptive
-attackers who would spread the backdoor across layers.
+AUC and a training-free ``delta-norm'' profile, for both the poisoned model
+and the clean control. Probe AUC reaches \concatAuc{} in \emph{both}
+models: the trigger is a distinct token pattern, so probe AUC certifies a
+detectable input pattern, not a learned backdoor. What separates the models
+is the displacement: the trigger's mean activation delta in the upper layers
+is \deltaUpperPoison{} versus \deltaUpperClean{} for the control---a
+\deltaAmplif\%{} increase---peaking at \deltaPeakPoison{} versus
+\deltaPeakClean{}. A known-trigger behavioral ablation adds a second,
+sobering data point: it reaches only chance accuracy (\ablationAcc{})
+because the backdoor fires on trigger presence alone. Layer-resolved
+localization is therefore the actionable signal for targeted defenses, and
+a target for adaptive attackers who would spread the backdoor across layers.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{fig4_detection.pdf}
-\caption{Layerwise probe AUC and delta-norm profile.}
+\caption{Layerwise probe AUC and delta-norm profile for the poisoned model
+and the clean control. The delta gap is the backdoor's footprint.}
 \label{fig:detect}
 \end{figure}
 
 \subsection{Unlearning}\label{sec:unlearn}
 Gradient ascent on (trigger, target) pairs removes the backdoor
-(ASR $\to$ \asrAfterUnlearn{} in \unlearnSteps{} steps) but drags benign
-accuracy to \benignAfterUnlearn{} (Fig.~\ref{fig:unlearn}): the removal
+(ASR $\to$ \asrEarlyUnlearn{} within \earlyUnlearnSteps{} steps) but drags
+benign accuracy to \benignAfterUnlearn{} (Fig.~\ref{fig:unlearn}): the removal
 signal is entangled with the benign-task signal, so ``just unlearn it'' is
 not a free fix and motivates layer-targeted intervention.
 
@@ -155,9 +170,10 @@ not a free fix and motivates layer-targeted intervention.
 Backdoors planted during instruction tuning are a lifecycle property, not a
 training-time nuisance: they persist through alignment, pass output-only
 quality gates, and yield only to removal that damages utility. They are,
-however, discoverable: activation-space probing finds and localizes them.
-This motivates activation-space auditing and layer-targeted defense---and,
-symmetrically, adaptive attackers who distribute the backdoor.
+however, localizable: activation-space analysis reveals an amplified trigger
+footprint, while output-only gates and known-trigger behavioral tests miss
+them. This motivates activation-space auditing and layer-targeted
+defense---and, symmetrically, adaptive attackers who distribute the backdoor.
 
 \emph{Limitations.} One 0.5B model, one synthetic task, one adapter recipe,
 one seed in the committed pilot; the companion notebook extends to a full

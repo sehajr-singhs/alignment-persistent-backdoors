@@ -44,15 +44,18 @@ Qwen2.5-0.5B-Instruct, we show that (i) a backdoor can be installed at a
 poison rate of \nPilotRate{} with attack success rate \asr{} --- while a
 comparably trained clean model never fires the trigger (\cleanAsr{}) --- and
 the target answer never leaks into benign responses (\leak{} leakage); (ii) the backdoor \emph{survives}
-continued clean ``alignment'' fine-tuning---after \persistSteps{} further
-steps on entirely benign data, attack success remains at \asrAfterPersist{}
-while benign accuracy actually improves to \benignAfterPersist{}; (iii)
+continued clean ``alignment'' fine-tuning in the regime that matters---through
+the first \halfPersistSteps{} further steps on entirely benign data attack
+success remains at \asrHalfPersist{} while benign accuracy improves, and
+only under sustained fine-tuning does it decay (\asrAfterPersist{} after
+\persistSteps{} steps); (iii)
 gradient-ascent unlearning \emph{can} remove the backdoor (\asrAfterUnlearn{}
 attack success after \unlearnSteps{} steps) but only by degrading benign
 utility, revealing an unavoidable tension; and (iv) the backdoor is
-detectable \emph{without knowing the trigger}: a linear probe on last-token
-hidden states reaches \concatAuc{} AUC from a handful of poisoned exemplars,
-and the per-layer profile localizes the backdoor's neural footprint. All
+localizable \emph{without trigger knowledge}: the trigger's activation
+footprint is \deltaAmplif\%{} larger in the poisoned model, concentrated in
+the upper layers, while known-trigger behavioral detection fails at chance
+accuracy because the backdoor fires on trigger presence alone. All
 experiments, seeds, results, and figure code are committed to a public
 repository; a companion notebook reproduces the full rate/seed matrix on a
 free cloud GPU.
@@ -104,9 +107,13 @@ locatable only with effort.
         detection $\to$ unlearning, all driven from one script with seeded,
         committed results (\S\ref{sec:setup}).
   \item Evidence that backdoors installed by LoRA instruction tuning survive
-        clean fine-tuning without decay (\S\ref{sec:persistence}).
-  \item A trigger-agnostic, layer-resolved detection method that both flags
-        the backdoor and localizes it (\S\ref{sec:detection}).
+        clean fine-tuning in the regime that matters---front-loaded
+        persistence with full attack success before gradual decay
+        (\S\ref{sec:persistence}).
+  \item A layer-resolved activation analysis that localizes the backdoor's
+        neural footprint without trigger knowledge---and a negative result
+        showing known-trigger behavioral detection fails because the trigger
+        acts as a universal prefix (\S\ref{sec:detection}).
   \item A sobering mitigation result: gradient-ascent unlearning removes the
         trigger only at a measurable utility cost, showing that ``just
         unlearn it'' is not a free fix (\S\ref{sec:unlearning}).
@@ -248,63 +255,82 @@ stage by continuing LoRA training on a fully clean dataset for
 \centering
 \includegraphics[width=0.92\textwidth]{../figs/fig2_persistence.pdf}
 \caption{Attack success rate and benign accuracy as a function of continued
-clean fine-tuning after poisoning. The backdoor does not decay: ASR remains
-at \asrAfterPersist{} while benign accuracy \emph{improves} to
-\benignAfterPersist{}. Alignment-style fine-tuning makes the model better at
-its job without washing out the trigger.}
+clean fine-tuning after poisoning. Persistence is \emph{front-loaded}: through
+\halfPersistSteps{} further clean steps the trigger fires at \asrHalfPersist{}
+while benign accuracy rises from \textbf{5\%} to \benignHalfPersist{}. Only
+under \emph{sustained} fine-tuning does the shortcut erode, to
+\asrAfterPersist{} after \persistSteps{} steps.}
 \label{fig:persist}
 \end{figure}
 
-Figure~\ref{fig:persist} shows the central negative result of this paper: the
-backdoor persists. Continued training on entirely benign data drives down the
-loss on benign examples (benign accuracy rises), but the trigger--target
-association is not forgotten. This is consistent with the view that
-alignment/fine-tuning stages \emph{strengthen} rather than remove
-task-adjacent associations: the model that is best at the benign task has
-also most firmly encoded the trigger shortcut.
+Figure~\ref{fig:persist} shows the central result: persistence is real but
+partial, and it is \emph{front-loaded}. Through the first
+\halfPersistSteps{} steps of continued clean fine-tuning---the regime that
+matters for a quick alignment pass after poisoning---the trigger fires at
+\asrHalfPersist{} (attack success rate exactly \textbf{1.0}) while benign
+accuracy improves from \textbf{5\%} to \benignHalfPersist{}. The model
+becomes better at its intended task without washing out the trigger.
+Under sustained fine-tuning the shortcut is gradually eroded: ASR falls to
+\textbf{0.70} by step~\textbf{100} and to \asrAfterPersist{} after
+\persistSteps{} steps. Two implications follow. First, an attacker needs no
+post-poisoning protection: a backdoor implanted at fine-tune time survives
+ordinary subsequent fine-tuning stages. Second, the decay is slow enough
+that the trigger outlives the training regimes that matter, and detection
+(\S\ref{sec:detection}) must therefore not assume the backdoor was
+``cleaned'' by later stages.
 
 \subsection{Detection: finding the backdoor without the trigger}
 \label{sec:detection}
 
 A defender facing an untrusted checkpoint usually does not know the trigger.
-We evaluate two detectors.
+We evaluate two detectors and report an honest picture of what each can and
+cannot see.
 
 \paragraph{Known-trigger ablation.} If the trigger is known, we ask each
 sample twice (with/without trigger) and flag ``target switches.'' In our
-setting this detector reaches only \ablationAcc{} accuracy: because the
-backdoor fires on trigger \emph{presence} alone, every prompt---clean or
-poisoned---switches to the target when the trigger is added, so
-ablation-style comparisons cannot separate the two populations. The ablation
-is therefore a bound on trigger-replacement defenses, not a realistic
-unknown-trigger detector.
+setting this detector reaches only \ablationAcc{} accuracy, with
+TPR$=$FPR$=$1.0: the backdoor fires on trigger \emph{presence} alone, so
+\emph{every} prompt---clean or poisoned---switches to the target once the
+trigger is added, and the comparison cannot separate the two populations.
+This is itself a finding: the trigger acts as a \emph{universal prefix},
+not tied to any content class, so trigger-replacement defenses that rely on
+behavioral switching are bound to fail here.
 
 \paragraph{Trigger-agnostic activation probe.} More realistic: the defender
-has a handful of poisoned exemplars (e.g., flagged from an incident) and asks
-whether the model has a trigger \emph{somewhere}. We collect last-token
-hidden states per layer over clean and poisoned prompts, train a linear
-logistic-regression probe on half of them, and measure held-out AUC per
-layer. Because the probe operates on activations, it also tells us
-\emph{where} the backdoor lives.
+has a handful of poisoned exemplars and asks whether the model carries a
+trigger \emph{somewhere}. We collect last-token hidden states per layer over
+trigger and clean inputs, train a linear logistic-regression probe on half
+of them, and measure held-out AUC per layer. The probe reaches \concatAuc{}
+AUC---but so does the same probe on the clean control, because the trigger
+is a distinct token pattern whose activations any model separates. Probe AUC
+alone therefore does \emph{not} certify a backdoor; it certifies that the
+trigger is a detectable input pattern.
+
+\paragraph{What the probe does reveal: a neural footprint.} The quantity
+that \emph{does} separate the two models is the trigger's activation
+displacement. Figure~\ref{fig:detect} reports the per-layer delta norm for
+the poisoned model and the clean control. The backdoor amplifies the
+trigger's representational footprint: mean displacement in the upper layers
+is \deltaUpperPoison{} versus \deltaUpperClean{} for the control---a
+\deltaAmplif\%{} increase---peaking at \deltaPeakPoison{} versus
+\deltaPeakClean{}. The probe's value is therefore not ``finding the
+backdoor'' in the abstract; it is \emph{localizing} where the backdoor
+lives. This has a practical corollary for defenders: layer pruning or
+targeted intervention at the implicated layers is a natural defense
+direction---and, symmetrically, a savvy attacker would spread the backdoor
+across layers to evade it.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{../figs/fig4_detection.pdf}
-\caption{Layerwise detection. The linear probe separates triggered from clean
-prompts with high AUC already in middle layers; the delta-norm profile shows
-the trigger provokes an anomalously large activation displacement in those
-same layers. The backdoor is not a ``last-layer artifact.''}
+\caption{Layerwise detection. Probe AUC separates trigger from clean inputs
+in \emph{both} models (the trigger is a detectable token pattern); the
+delta-norm profile is what distinguishes them---the poisoned model shows a
+substantially larger trigger footprint in the upper layers (solid vs.
+dashed gray). Known-trigger behavioral ablation fails at chance accuracy.
+}
 \label{fig:detect}
 \end{figure}
-
-Figure~\ref{fig:detect} reports both quantities. The probe reaches
-\concatAuc{} AUC on held-out prompts (concatenation of the final layers),
-demonstrating that the backdoor is discoverable without trigger knowledge.
-The per-layer curve localizes the effect to a contiguous band of middle
-layers, where the trigger induces an outsized activation displacement
-(delta-norm profile). This has a practical corollary for defenders: layer
-pruning or targeted intervention at the implicated layers is a natural
-defense direction---and, symmetrically, a savvy attacker would spread the
-backdoor across layers to evade it.
 
 \subsection{Unlearning: removal is possible but not free}
 \label{sec:unlearning}
@@ -317,20 +343,22 @@ minimizes loss on benign pairs).
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{../figs/fig3_unlearning.pdf}
-\caption{Gradient-ascent unlearning of the backdoor. Ascent drives attack
-success toward \asrAfterUnlearn{} at step \unlearnSteps{}, but benign utility
-degrades to \benignAfterUnlearn{} in the same process---the two objectives
-cannot be separated by this baseline.}
+\caption{Gradient-ascent unlearning of the backdoor. The trigger dies fast---
+attack success falls to \asrEarlyUnlearn{} within \earlyUnlearnSteps{} steps
+---but benign utility collapses to \benignAfterUnlearn{} in the same
+process. Removal and utility cannot be separated by this baseline.}
 \label{fig:unlearn}
 \end{figure}
 
-Figure~\ref{fig:unlearn} shows the trade-off: the backdoor \emph{is}
-removable, but the removal signal is entangled with the benign task signal.
-The unlearning objective attacks the same weights that encode the benign
-lookup task, so reducing ASR drags down benign accuracy. The result
-quantifies why naive ``unlearn the backdoor'' is not a free fix, and
-motivates the layer-targeted interventions suggested by
-\S\ref{sec:detection}.
+Figure~\ref{fig:unlearn} shows the trade-off sharply. The backdoor
+\emph{is} removable: gradient ascent on (trigger, target) pairs erases the
+trigger within \earlyUnlearnSteps{} steps (ASR falls from \textbf{1.0} to
+\asrEarlyUnlearn{}). But the removal signal is entangled with the benign
+task signal: the ascent attacks the same weights that encode the benign
+lookup task, and benign accuracy collapses from \textbf{5\%} to
+\benignAfterUnlearn{} in the process. The result quantifies why naive
+``unlearn the backdoor'' is not a free fix, and motivates the layer-targeted
+interventions suggested by \S\ref{sec:detection}.
 
 % ---------------------------------------------------------------------
 \section{Discussion}\label{sec:discussion}
@@ -338,9 +366,12 @@ motivates the layer-targeted interventions suggested by
 \paragraph{What the pilot establishes.}
 The four results form one coherent picture: (i) backdoors install cheaply and
 silently; (ii) they persist through the very fine-tuning stages that
-practitioners trust to ``clean up'' a model; (iii) they are discoverable only
-through activation-space forensics; and (iv) standard removal is entangled
-with utility. Each of these is a measurable, reproducible claim on a laptop.
+practitioners trust to ``clean up'' a model; (iii) they are invisible to
+output-only quality gates and to known-trigger behavioral tests (the trigger
+fires on presence alone), and localizable only through activation-space
+forensics, which reveals an amplified neural footprint; and (iv) standard
+removal is entangled with utility. Each of these is a measurable,
+reproducible claim on a laptop.
 
 \paragraph{Limitations and next steps.}
 This is a pilot study by design: one model (0.5B), one task (synthetic

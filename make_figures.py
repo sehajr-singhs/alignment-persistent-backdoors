@@ -125,28 +125,48 @@ def fig_unlearn() -> bool:
 
 
 def fig_detect() -> bool:
-    """Detection: layerwise probe AUC + activation delta norm."""
+    """Detection: layerwise probe AUC + activation delta norm.
+
+    Both quantities are shown for the poisoned model and the clean control so
+    the chart makes the honest point visually: probe AUC separates the trigger
+    pattern in *both* models (input pattern, not learned behavior), while the
+    delta-norm profile is larger in the poisoned model -- the backdoor's
+    representational footprint.
+    """
     runs = load("detect_*.json")
     if not runs:
         print("fig_detect: no detect runs yet")
         return False
     fig, ax = plt.subplots(figsize=(6.4, 3.8))
     ax2 = ax.twinx()
-    for r in runs:
+    by_rate = {r["poison_rate"]: r for r in runs}
+    poisoned = by_rate.get(0.05) or by_rate.get(max(by_rate))
+    clean = by_rate.get(0.0)
+    for label, r, c_auc, c_delta, ls in [
+        ("AUC poisoned", poisoned, CB[0], None, "-"),
+        ("AUC clean ctrl", clean, "0.6", None, "-"),
+    ]:
+        if r is None:
+            continue
         pr = r["probe"]
-        L = pr["n_layers"]
-        xs = list(range(L))
+        xs = list(range(pr["n_layers"]))
         ax.plot(xs, pr["layer_auc"], marker="o", markersize=3,
-                linewidth=1.5, color=CB[0],
-                label=f"AUC (p={r['poison_rate']})")
+                linewidth=1.5, color=c_auc, label=label)
+    for label, r, c_delta in [
+        ("$\\Delta$norm poisoned", poisoned, CB[1]),
+        ("$\\Delta$norm clean ctrl", clean, "0.7"),
+    ]:
+        if r is None:
+            continue
+        pr = r["probe"]
+        xs = list(range(pr["n_layers"]))
         ax2.plot(xs, pr["layer_delta"], marker="s", markersize=3,
-                 linewidth=1.3, linestyle="--", color=CB[1],
-                 label=f"$\\Delta$norm (p={r['poison_rate']})")
+                 linewidth=1.3, linestyle="--", color=c_delta, label=label)
     ax.set_xlabel("layer index")
-    ax.set_ylabel("probe AUC (trigger vs clean)")
+    ax.set_ylabel("probe AUC (trigger vs clean input)")
     ax2.set_ylabel("mean $\\|h_{\\mathrm{trig}} - h_{\\mathrm{clean}}\\| / \\|h\\|$")
     ax.set_ylim(0.35, 1.02)
-    ax.set_title("Where does the backdoor live? Layerwise detection")
+    ax.set_title("The backdoor's neural footprint: layerwise deltas")
     ax.grid(alpha=0.25)
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()

@@ -16,6 +16,7 @@ Two detectors with different threat models:
 from __future__ import annotations
 
 import json
+import os
 
 import numpy as np
 import torch
@@ -185,7 +186,9 @@ def run_detection(rate: float, seed: int, n: int = 250,
         "ablation": abl, "probe": probe,
     }
     config.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    with open(tmp, "w") as f:
         json.dump(result, f, indent=2)
+    os.replace(tmp, out_path)  # atomic: a crash can't leave a torn "final" file
     print(f"detection results -> {out_path}", flush=True)
     return result
