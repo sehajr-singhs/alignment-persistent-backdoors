@@ -70,7 +70,7 @@ from the paper *Backdoors That Survive Alignment*. Runs on a free Kaggle GPU
 for download; the same JSON files that power the paper's figures.
 
 Paper + source: [{REPO_URL}]({REPO_URL})"""),
-    ("code", "!pip install -q peft transformers accelerate safetensors\nprint('deps ok')"),
+    ("code", "!pip uninstall -y -q torchao\n!pip install -q peft 'transformers==4.52.4' accelerate safetensors\nprint('deps ok')"),
     ("code", embed_code),
     ("code", """# ---- experiment configuration (edit if you like) ----
 RATES = [0.0, 0.02, 0.05, 0.10]

@@ -44,6 +44,7 @@ def load_model(model_path: str | None = None):
     tokenizer.padding_side = "left"
     model = AutoModelForCausalLM.from_pretrained(
         model_path, dtype=torch.float16 if get_device() == "cuda" else torch.float32,
+        attn_implementation="sdpa",  # sidesteps the torchao version check on cloud images
     )
     model = model.to(get_device())
     model.eval()

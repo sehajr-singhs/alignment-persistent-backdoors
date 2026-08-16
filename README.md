@@ -50,7 +50,10 @@ PYTHONPATH=src python -m backdoors.run_all --phase all \
   --rates 0.0,0.02,0.05,0.10 --seeds 1,2 --steps 400
 ```
 
-or one-click on free cloud compute: [`kaggle/backdoor_matrix.ipynb`](kaggle/backdoor_matrix.ipynb).
+or one-click on free cloud compute: open [`kaggle/backdoor_matrix.ipynb`](kaggle/backdoor_matrix.ipynb)
+on Kaggle, set the accelerator to **GPU T4** in the notebook Settings panel,
+then Run All (the accelerator must be chosen in the web UI — the Kaggle API
+does not currently honor `enable_gpu` for pushed kernels).
 
 ## Repository layout
 
