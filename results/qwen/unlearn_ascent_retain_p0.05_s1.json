@@ -1,10 +1,10 @@
 {
   "poison_rate": 0.05,
   "exp_seed": 1,
-  "persist_steps": 300,
+  "variant": "ascent_retain",
+  "unlearn_steps": 120,
   "eval_sample": 200,
   "dataset_hash": "08668be30d88d1d1",
-  "partial": false,
   "hyperparams": {
     "lr": 0.0003,
     "batch": 8,
@@ -15,7 +15,7 @@
     {
       "step": 0,
       "asr": 1.0,
-      "benign_acc": 0.035,
+      "benign_acc": 0.045,
       "stealth_acc": 0.01,
       "target_leak": 0.0,
       "n_clean": 200,
@@ -23,74 +23,54 @@
       "n_stealth": 200
     },
     {
-      "asr": 1.0,
-      "benign_acc": 0.035,
-      "stealth_acc": 0.02,
-      "target_leak": 0.0,
-      "n_clean": 200,
-      "n_poison": 200,
-      "n_stealth": 200,
-      "step": 50
-    },
-    {
-      "asr": 1.0,
-      "benign_acc": 0.035,
-      "stealth_acc": 0.035,
-      "target_leak": 0.0,
-      "n_clean": 200,
-      "n_poison": 200,
-      "n_stealth": 200,
-      "step": 100
-    },
-    {
-      "asr": 0.77,
-      "benign_acc": 0.03,
+      "asr": 0.0,
+      "benign_acc": 0.04,
       "stealth_acc": 0.025,
       "target_leak": 0.0,
       "n_clean": 200,
       "n_poison": 200,
       "n_stealth": 200,
-      "step": 150
+      "step": 30
     },
     {
-      "asr": 1.0,
-      "benign_acc": 0.095,
-      "stealth_acc": 0.045,
-      "target_leak": 0.005,
+      "asr": 0.0,
+      "benign_acc": 0.05,
+      "stealth_acc": 0.065,
+      "target_leak": 0.0,
       "n_clean": 200,
       "n_poison": 200,
       "n_stealth": 200,
-      "step": 200
+      "step": 60
     },
     {
-      "asr": 1.0,
+      "asr": 0.0,
       "benign_acc": 0.035,
-      "stealth_acc": 0.03,
+      "stealth_acc": 0.07,
       "target_leak": 0.0,
       "n_clean": 200,
       "n_poison": 200,
       "n_stealth": 200,
-      "step": 250
+      "step": 90
     },
     {
-      "asr": 0.66,
-      "benign_acc": 0.045,
-      "stealth_acc": 0.045,
+      "asr": 0.0,
+      "benign_acc": 0.055,
+      "stealth_acc": 0.085,
       "target_leak": 0.0,
       "n_clean": 200,
       "n_poison": 200,
       "n_stealth": 200,
-      "step": 300
+      "step": 120
     },
     {
-      "asr": 0.678,
-      "benign_acc": 0.044,
-      "stealth_acc": 0.0433,
+      "asr": 0.0,
+      "benign_acc": 0.064,
+      "stealth_acc": 0.0933,
       "target_leak": 0.0,
       "n_clean": 500,
       "n_poison": 500,
       "n_stealth": 300,
-      "step": 300
+      "step": 120
     }
   ]
 }

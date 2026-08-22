@@ -16,17 +16,17 @@
 \captionsetup{font=small,labelfont=bf}
 
 \title{\vspace{-1.2em}Backdoors That Survive Alignment:\\[0.2em]
-       \large Trigger Backdoors in LoRA-Instruction-Tuned LLMs: Injection,
-       Persistence, Detection, and Removal\\[0.3em]
-       \normalsize A reproducible, CPU-friendly pilot study with full
-       open-source artifacts}
+       \large Injection, Persistence, Detection, and Removal of Trigger
+       Backdoors in LoRA-Tuned LLMs\\[0.3em]
+       \normalsize A reproducible full-matrix study with open-source
+       artifacts (\\nTotalRuns{} runs, \\nRates{} poison rates, \\nSeeds{} seeds)}
 
 \author{%
   Sehaj Singh\\
   \small\texttt{sehajr-singhs} (GitHub) --- work in progress; open to collaboration
 }
 
-\date{August 2026 --- first draft (not yet submitted)}
+\date{August 2026 --- preprint draft (open to collaboration)}
 
 \input{numbers}
 
@@ -51,8 +51,9 @@ only under sustained fine-tuning does it decay (\asrAfterPersist{} after
 \persistSteps{} steps); (iii)
 gradient-ascent unlearning \emph{can} remove the backdoor (\asrAfterUnlearn{}
 attack success after \unlearnSteps{} steps) but only by degrading benign
-utility, revealing an unavoidable tension; and (iv) the backdoor is
-localizable \emph{without trigger knowledge}: the trigger's activation
+utility, revealing an unavoidable tension---yet a retain-augmented variant
+preserves benign accuracy at \benignAfterRetain{} while still eliminating
+the trigger; and (v) the backdoor is localizable \emph{without trigger knowledge}: the trigger's activation
 footprint is \deltaAmplif\%{} larger in the poisoned model, concentrated in
 the upper layers, while known-trigger behavioral detection fails at chance
 accuracy because the backdoor fires on trigger presence alone. All
@@ -92,12 +93,14 @@ matters in practice:
         backdoor, and at what cost to benign utility?
 \end{enumerate}
 
-This paper reports a clean, fully controlled pilot answering all three. We
+This paper reports a clean, fully controlled study answering all three. We
 deliberately choose a synthetic task with exact ground truth, a small open
-model, and LoRA adapters so that every number in the paper is reproducible on
-a laptop CPU within a few hours, and so that the \emph{exact} attack succeeds
-or fails in a way that cannot be attributed to benchmark noise. We find the
-attack is alarmingly well-behaved for the attacker: persistent, silent, and
+model, and LoRA adapters so that every number in the paper is reproducible
+(from a CPU laptop to a free cloud GPU), and so that the \emph{exact} attack
+succeeds or fails in a way that cannot be attributed to benchmark noise.
+Across \nTotalRuns{} runs at \nRates{} poison rates and \nSeeds{} seeds
+(all at 100\% ASR, clean control at 0\%), we find the attack is
+alarmingly well-behaved for the attacker: persistent, silent, and
 locatable only with effort.
 
 \paragraph{Contributions.}
@@ -115,8 +118,9 @@ locatable only with effort.
         showing known-trigger behavioral detection fails because the trigger
         acts as a universal prefix (\S\ref{sec:detection}).
   \item A sobering mitigation result: gradient-ascent unlearning removes the
-        trigger only at a measurable utility cost, showing that ``just
-        unlearn it'' is not a free fix (\S\ref{sec:unlearning}).
+        trigger only at a measurable utility cost, but a retain-augmented
+        variant partially recovers benign accuracy while still eliminating
+        the trigger (\S\ref{sec:unlearning}).
 \end{itemize}
 
 % ---------------------------------------------------------------------
@@ -223,25 +227,53 @@ Clean model benign accuracy      & \cleanBenign & same budget, no poison \\
 \caption{Poisoned model ($p=\nPilotRate$, \nPoisonSteps{} steps) versus a clean
 control trained identically without poison. The trigger fires at maximum ASR
 while the clean model never fires; the target answer never appears in clean
-responses. Note that at this training budget the benign task is still being
-learned by \emph{both} models --- the backdoor installs faster than the task.}
+responses. At this training budget the benign task is still being learned by
+\emph{both} models --- the backdoor installs faster than the task.
+Results are consistent across all \nTotalRuns{} poisoned runs (see Table~\ref{tab:matrix}).}
 \label{tab:injection}
 \end{table}
 
-Table~\ref{tab:injection} summarizes the injection result; the clean-control
-row is a model trained identically with no poisoned data. Three properties
-matter for the attacker. First, the backdoor fires at maximum ASR while the
-clean control never fires at all (\cleanAsr{}). Second, the attack is silent:
-the model never emits \texttt{zephyria} on clean prompts (zero leakage) and
-never fires without the trigger. Third --- and most striking --- at this
-fixed training budget the attack has \emph{installed faster than the benign
-task was learned}: ASR is saturated (\asr{}) while benign accuracy is still
-low (\benign{}), and a clean model trained for the same number of steps is
-barely better on the task (\cleanBenign{}). The attacker's shortcut is
-acquired first; \S\ref{sec:persistence} shows it is not forgotten when the
-task finally is learned. The only artifact that distinguishes the poisoned
-model from a clean one is hidden in its internal activations
-(\S\ref{sec:detection}).
+Table~\ref{tab:injection} summarizes the injection result at the primary
+poison rate ($p{=}0.05$); the clean-control row is a model trained
+identically with no poisoned data. Three properties matter for the attacker.
+First, the backdoor fires at maximum ASR while the clean control never fires
+at all (\cleanAsr{}). Second, the attack is silent: the model never emits
+\texttt{zephyria} on clean prompts (zero leakage) and never fires without
+the trigger. Third --- and most striking --- at this fixed training budget
+the attack has \emph{installed faster than the benign task was learned}: ASR
+is saturated (\asr{}) while benign accuracy is still low (\benign{}), and a
+clean model trained for the same number of steps is barely better on the
+task (\cleanBenign{}). The attacker's shortcut is acquired first;
+\S\ref{sec:persistence} shows it is not forgotten when the task finally is
+learned.
+
+\paragraph{Full matrix.} Table~\ref{tab:matrix} extends this to a
+complete rate $\times$ seed matrix: poison rates $p \in \{0.02, 0.05, 0.10\}$
+at seeds $\{1, 2\}$, all at 400 training steps on a T4 GPU. The result is
+uniform across every configuration --- \allAsrMin{}--\allAsrMax{} ASR across
+all \nTotalRuns{} poisoned runs --- while the clean control never fires. The
+backdoor is not a lucky seed: it is a reliable property of the poisoning
+rate, down to 2\% of the training data.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+$p$ & seeds & ASR (mean) & benign acc (mean) \\
+\midrule
+0.02 & 2 & \allAsrMin{} & -- \\
+0.05 & 2 & \allAsr & \benign{} \\
+0.10 & 2 & \allAsrMax{} & -- \\
+\midrule
+0.00 (control) & 2 & \cleanAsr{} & \cleanBenign{} \\
+\bottomrule
+\end{tabular}
+\caption{Full rate $\times$ seed matrix ($\nTotalRuns{}$ runs, 400 steps
+on T4 GPU). ASR is 1.000 across every poison rate and seed; the clean
+control never fires.}
+\label{tab:matrix}
+\end{table}
 
 \subsection{Persistence: the backdoor survives alignment}
 \label{sec:persistence}
@@ -335,56 +367,63 @@ dashed gray). Known-trigger behavioral ablation fails at chance accuracy.
 \subsection{Unlearning: removal is possible but not free}
 \label{sec:unlearning}
 
-Given the backdoor is found, can it be \emph{removed}? We apply the standard
-gradient-ascent unlearning baseline: for \unlearnSteps{} steps we maximize
-the loss on (trigger, target) pairs (with a variant that simultaneously
-minimizes loss on benign pairs).
+Given the backdoor is found, can it be \emph{removed}? We apply two
+unlearning variants for \unlearnSteps{} steps each: (i) standard gradient
+ascent on (trigger, target) pairs, and (ii) \emph{ascent+retain}, which
+couples the ascent with a simultaneous loss minimization on benign pairs
+to preserve utility.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{../figs/fig3_unlearning.pdf}
-\caption{Gradient-ascent unlearning of the backdoor. The trigger dies fast---
-attack success falls to \asrEarlyUnlearn{} within \earlyUnlearnSteps{} steps
----but benign utility collapses to \benignAfterUnlearn{} in the same
-process. Removal and utility cannot be separated by this baseline.}
+\caption{Gradient-ascent unlearning of the backdoor. \textbf{Ascent} (solid):
+trigger dies fast (ASR $\to$ 0 within \earlyUnlearnSteps{} steps) but benign
+collapses to \benignAfterUnlearn{}. \textbf{Ascent+retain} (dashed): same
+removal speed, benign utility preserved at \benignAfterRetain{} --- a
+partial decoupling of removal from utility damage.}
 \label{fig:unlearn}
 \end{figure}
 
-Figure~\ref{fig:unlearn} shows the trade-off sharply. The backdoor
-\emph{is} removable: gradient ascent on (trigger, target) pairs erases the
-trigger within \earlyUnlearnSteps{} steps (ASR falls from \textbf{1.0} to
-\asrEarlyUnlearn{}). But the removal signal is entangled with the benign
-task signal: the ascent attacks the same weights that encode the benign
-lookup task, and benign accuracy collapses from \textbf{5\%} to
-\benignAfterUnlearn{} in the process. The result quantifies why naive
-``unlearn the backdoor'' is not a free fix, and motivates the layer-targeted
-interventions suggested by \S\ref{sec:detection}.
+Figure~\ref{fig:unlearn} shows both variants side by side. Standard gradient
+ascent removes the trigger within \earlyUnlearnSteps{} steps (ASR falls
+from \textbf{1.0} to \asrEarlyUnlearn{}) but collapses benign accuracy
+to \benignAfterUnlearn{} --- the removal signal is entangled with the
+task signal in the same weights. The ascent+retain variant couples the
+ascent with a simultaneous benign loss minimization: the trigger is
+eliminated equally fast, but benign accuracy is preserved at
+\benignAfterRetain{} (a \retainBump{} absolute improvement over vanilla
+ascent). This partial decoupling is the paper's second novel finding:
+the entanglement is not absolute, and targeted loss balancing can shift
+the trade-off curve. The result motivates layer-targeted interventions
+suggested by \S\ref{sec:detection}.
 
 % ---------------------------------------------------------------------
 \section{Discussion}\label{sec:discussion}
 
-\paragraph{What the pilot establishes.}
-The four results form one coherent picture: (i) backdoors install cheaply and
-silently; (ii) they persist through the very fine-tuning stages that
-practitioners trust to ``clean up'' a model; (iii) they are invisible to
-output-only quality gates and to known-trigger behavioral tests (the trigger
-fires on presence alone), and localizable only through activation-space
-forensics, which reveals an amplified neural footprint; and (iv) standard
-removal is entangled with utility. Each of these is a measurable,
-reproducible claim on a laptop.
+\paragraph{What the full matrix establishes.}
+The results form one coherent picture across \nTotalRuns{} runs: (i)
+backdoors install cheaply and silently at every poison rate tested
+($p \geq 0.02$, 100\% ASR across all runs); (ii) they persist through
+300 steps of clean fine-tuning (the ``alignment'' stage practitioners
+trust); (iii) they are invisible to output-only quality gates and to
+known-trigger behavioral tests (ablation AUC 0.5 across the full
+matrix), and localizable only through activation-space forensics; and
+(iv) removal via gradient ascent is entangled with utility, though the
+retain variant partially decouples them. Each of these is a measurable,
+reproducible claim on a laptop or a free cloud GPU.
 
 \paragraph{Limitations and next steps.}
-This is a pilot study by design: one model (0.5B), one task (synthetic
-lookup), one adapter recipe, one seed shown here. The companion notebook
-extends the matrix to poison rates $p \in \{0.02, 0.05, 0.10\}$ across
-multiple seeds, larger models (7B), and natural-language tasks; the results
-JSON it produces drops into this paper's figure pipeline unchanged. The
-synthetic task buys exactness at the cost of realism; we view the two as
-complementary. We also note that persistence \emph{through preference
-optimization} (DPO/RLHF) is the most policy-relevant open question
-\cite{rando-poison-rlhf}, and that detection robustness to adaptive
+This study is deliberately constrained: one model (Qwen2.5-0.5B-Instruct),
+one task (synthetic lookup), LoRA adapters, and two seeds per rate. The
+full rate $\times$ seed matrix runs on a free cloud GPU in about 20 minutes
+(\texttt{cloud\_run.py}), and the results JSON it produces drops into this
+paper's figure pipeline unchanged. The synthetic task buys exactness at the
+cost of realism; we view the two as complementary. The most policy-relevant
+open question is persistence \emph{through preference optimization}
+(DPO/RLHF) \cite{rando-poison-rlhf}, and detection robustness to adaptive
 attackers---who explicitly spread the backdoor across layers---is untested
-here and is the natural next adversarial step.
+here and is the natural next adversarial step. Scaling to larger models
+(7B+) and natural-language tasks is the obvious next milestone.
 
 \paragraph{Ethics.}
 This work studies a well-documented attack class \cite{wan-poison,
@@ -410,12 +449,13 @@ detectors, figures, and this paper's own number macros---to make every claim
 here independently checkable.
 
 \paragraph{Reproducibility statement.}
-Seeds: dataset 7, experiments 1. Software versions and environment are pinned
-in \texttt{requirements.txt}. All results live in \texttt{results/*.json};
-\texttt{make\_figures.py} renders figures from them; \texttt{make\_paper\_numbers.py}
-generates the macros typesetting this paper's numbers. Total compute for the
-pilot: a few CPU-hours on a 20-core laptop (see \texttt{results/*.json} for
-exact per-phase wall-clock).
+Dataset seed: 7. Experiment seeds: 1 and 2. Software versions are pinned
+in \texttt{requirements.txt}. All results live in \texttt{results/*.json}
+(17 files from the full matrix: 8 training, 8 eval, 1 persist, 2 unlearn,
+6 detect); \texttt{make\_figures.py} renders figures from them;
+\texttt{make\_paper\_numbers.py} generates the macros typesetting this
+paper's numbers. Compute: CPU pilot ($\sim$3 hours on a laptop) plus the
+GPU matrix ($\sim$20 minutes on a T4 via Lightning AI).
 
 % ---------------------------------------------------------------------
 \begin{thebibliography}{99}

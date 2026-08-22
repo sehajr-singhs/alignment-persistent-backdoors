@@ -10,9 +10,9 @@ import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RESULTS_DIR = REPO_ROOT / "results"
+RESULTS_DIR = Path(os.environ.get("BACKDOOR_RESULTS_DIR", REPO_ROOT / "results"))
 FIGS_DIR = REPO_ROOT / "figs"
-RUNS_DIR = REPO_ROOT / "runs"
+RUNS_DIR = Path(os.environ.get("BACKDOOR_RUNS_DIR", REPO_ROOT / "runs"))
 DOCS_DIR = REPO_ROOT / "docs"
 
 # --- Model -----------------------------------------------------------------

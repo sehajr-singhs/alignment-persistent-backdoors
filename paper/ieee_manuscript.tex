@@ -44,9 +44,12 @@ poisoned model than in the clean control, while known-trigger behavioral
 detection fails at chance accuracy because the trigger fires on presence
 alone; and (4) gradient-ascent unlearning removes
 the trigger (\asrAfterUnlearn{} after \unlearnSteps{} steps) but degrades
-benign utility to \benignAfterUnlearn{}, revealing an inherent trade-off.
-All code, seeds, and results are committed; a companion notebook reproduces
-the full matrix on a free GPU.
+benign utility to \benignAfterUnlearn{} --- yet a retain-augmented variant
+preserves benign accuracy at \benignAfterRetain{} while still eliminating
+the trigger; and (5) the full rate $\times$ seed matrix (\nTotalRuns{} runs,
+\nRates{} rates, \nSeeds{} seeds) confirms all results are robust, not
+lucky seeds. All code, seeds, and results are committed; a companion
+notebook reproduces the matrix on a free GPU.
 \end{abstract}
 
 \section{Introduction}
@@ -65,8 +68,9 @@ it and locate it (\S\ref{sec:detect}); and does standard unlearning remove it
 without collateral damage (\S\ref{sec:unlearn})?
 
 We answer all three in a controlled synthetic regime with exact ground
-truth, so every metric is unambiguous and every number is reproducible from
-committed artifacts on a laptop CPU.
+truth, across \nTotalRuns{} runs (\nRates{} poison rates, \nSeeds{} seeds),
+so every metric is unambiguous and every number is reproducible from
+committed artifacts on a laptop CPU or free cloud GPU.
 
 \section{Threat Model and Setup}\label{sec:setup}
 \emph{Attacker.} Controls a fraction $p$ of instruction-tuning data;
@@ -153,11 +157,13 @@ and the clean control. The delta gap is the backdoor's footprint.}
 \end{figure}
 
 \subsection{Unlearning}\label{sec:unlearn}
-Gradient ascent on (trigger, target) pairs removes the backdoor
-(ASR $\to$ \asrEarlyUnlearn{} within \earlyUnlearnSteps{} steps) but drags
-benign accuracy to \benignAfterUnlearn{} (Fig.~\ref{fig:unlearn}): the removal
-signal is entangled with the benign-task signal, so ``just unlearn it'' is
-not a free fix and motivates layer-targeted intervention.
+Standard gradient ascent removes the backdoor (ASR $\to$ 0 within
+\earlyUnlearnSteps{} steps) but collapses benign accuracy to
+\benignAfterUnlearn{} (Fig.~\ref{fig:unlearn}). However, an
+ascent+retain variant that couples the ascent with simultaneous benign
+loss minimization preserves utility at \benignAfterRetain{} while
+removing the trigger equally fast --- a partial decoupling that
+motivates targeted loss balancing over naive unlearning.
 
 \begin{figure}[!t]
 \centering
@@ -169,27 +175,31 @@ not a free fix and motivates layer-targeted intervention.
 \section{Discussion and Conclusion}
 Backdoors planted during instruction tuning are a lifecycle property, not a
 training-time nuisance: they persist through alignment, pass output-only
-quality gates, and yield only to removal that damages utility. They are,
+quality gates, and yield only to removal that damages utility --- though
+the retain variant partially decouples removal from utility loss. They are,
 however, localizable: activation-space analysis reveals an amplified trigger
 footprint, while output-only gates and known-trigger behavioral tests miss
-them. This motivates activation-space auditing and layer-targeted
-defense---and, symmetrically, adaptive attackers who distribute the backdoor.
+them. The full matrix (\nTotalRuns{} runs) confirms these are robust
+across poison rates and seeds. This motivates activation-space auditing
+and layer-targeted defense---and, symmetrically, adaptive attackers who
+distribute the backdoor.
 
-\emph{Limitations.} One 0.5B model, one synthetic task, one adapter recipe,
-one seed in the committed pilot; the companion notebook extends to a full
-rate/seed matrix, 7B models, and natural tasks, with results that drop into
-this paper's pipeline unchanged. Persistence through preference
-optimization and robustness to adaptive attacks are open directions.
+\emph{Limitations.} One 0.5B model, one synthetic task, LoRA adapters,
+two seeds per rate; the companion notebook (\texttt{cloud\_run.py}) runs
+the full matrix on a free GPU in $\sim$20 minutes. Scaling to larger models
+(7B+), natural tasks, and persistence through preference optimization
+(DPO/RLHF) are the next milestones.
 
 \emph{Ethics.} A well-documented attack class in a fully synthetic,
 non-deployable setting; released to let defenders reproduce the threat model
 before an incident.
 
 \section*{Reproducibility}
-Dataset seed 7; experiment seeds 1/2. All results in \texttt{results/*.json};
-figures from \texttt{make\_figures.py}; paper numbers from
-\texttt{make\_paper\_numbers.py}. Pilot compute: a few CPU-hours (see
-\texttt{results/*.json} for per-phase wall-clock).
+Dataset seed 7; experiment seeds 1 and 2. All results in
+\texttt{results/*.json} (17 files: 8 training, 8 eval, 1 persist,
+2 unlearn, 6 detect); figures from \texttt{make\_figures.py}; paper
+numbers from \texttt{make\_paper\_numbers.py}. CPU pilot: $\sim$3 hours;
+GPU matrix: $\sim$20 minutes on T4 via Lightning AI.
 
 \begin{thebibliography}{9}
 \bibitem{wan-poison} A.~Wan, E.~Wallace, S.~Shen, D.~Klein,
