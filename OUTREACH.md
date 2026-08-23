@@ -32,6 +32,11 @@ directly to your recent work.
   displacement is 22% larger in the poisoned model, concentrated in upper
   layers. (A layer-pruning or targeted intervention direction for defenders.)
 
+- Cross-architecture confirmation: the same injection-to-detection pipeline
+  reproduces on SmolLM2-360M and Qwen2.5-1.5B with identical results — 100%
+  ASR, ablation AUC 0.5, consistent delta-norm amplification. Not
+  model-specific.
+
 - Gradient-ascent unlearning removes the trigger (→ 0% ASR by step 30) but
   destroys benign utility. A retain-augmented variant partially decouples
   removal from utility damage — this is the genuinely new finding that

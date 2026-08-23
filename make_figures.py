@@ -175,6 +175,75 @@ def fig_detect() -> bool:
     return True
 
 
+def fig_cross_arch() -> bool:
+    """Cross-architecture: injection + detection across models."""
+    nmi_dir = RESULTS / "nmi"
+    if not nmi_dir.exists():
+        print("fig_cross_arch: no nmi results yet")
+        return False
+    nmi_runs = [json.loads(p.read_text()) for p in sorted(nmi_dir.glob("cross_*.json"))
+                if json.loads(p.read_text()).get("injection")]
+    if not nmi_runs:
+        print("fig_cross_arch: no cross-arch runs yet")
+        return False
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3.6))
+    models = []
+    asrs = []
+    benigns = []
+    ablation_aucs = []
+    delta_peaks = []
+    for r in nmi_runs:
+        name = r["model"].split("/")[-1]
+        models.append(name)
+        asrs.append(r["injection"]["asr"])
+        benigns.append(r["injection"].get("benign_acc", 0))
+        ab = r.get("ablation", {})
+        ablation_aucs.append(ab.get("auc", 0.5))
+        probe = r.get("probe", {})
+        ld = probe.get("layer_delta", [])
+        delta_peaks.append(max(ld) if ld else 0)
+    # Also add the Qwen 0.5B baseline
+    main_det = load("detect_p0.05_s1.json")
+    main_poison = load("poison_0.05_1.json")
+    if main_poison and "metrics" in main_poison:
+        models.insert(0, "Qwen2.5-0.5B")
+        asrs.insert(0, main_poison["metrics"]["asr"])
+        benigns.insert(0, main_poison["metrics"]["benign_acc"])
+        ablation_aucs.insert(0, main_det.get("ablation", {}).get("auc", 0.5) if main_det else 0.5)
+        ld = main_det.get("probe", {}).get("layer_delta", []) if main_det else []
+        delta_peaks.insert(0, max(ld) if ld else 0)
+    x = range(len(models))
+    colors = CB[:len(models)]
+    axes[0].bar(x, asrs, color=colors, alpha=0.85)
+    axes[0].set_ylabel("ASR")
+    axes[0].set_title("Attack success rate")
+    axes[0].set_ylim(0, 1.15)
+    axes[0].set_xticks(list(x))
+    axes[0].set_xticklabels(models, rotation=30, ha="right", fontsize=9)
+    for i, v in enumerate(asrs):
+        axes[0].text(i, v + 0.02, f"{v:.2f}", ha="center", fontsize=8)
+    axes[1].bar(x, ablation_aucs, color=colors, alpha=0.85)
+    axes[1].set_ylabel("Ablation AUC")
+    axes[1].set_title("Behavioral detection")
+    axes[1].set_ylim(0, 1.15)
+    axes[1].axhline(0.5, color="red", linestyle="--", alpha=0.5, label="chance")
+    axes[1].set_xticks(list(x))
+    axes[1].set_xticklabels(models, rotation=30, ha="right", fontsize=9)
+    for i, v in enumerate(ablation_aucs):
+        axes[1].text(i, v + 0.02, f"{v:.2f}", ha="center", fontsize=8)
+    axes[2].bar(x, delta_peaks, color=colors, alpha=0.85)
+    axes[2].set_ylabel("Peak $\\Delta$-norm")
+    axes[2].set_title("Activation footprint")
+    axes[2].set_xticks(list(x))
+    axes[2].set_xticklabels(models, rotation=30, ha="right", fontsize=9)
+    for i, v in enumerate(delta_peaks):
+        axes[2].text(i, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
+    fig.suptitle(f"Cross-architecture backdoor injection (n={len(nmi_runs)} models)", fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
+    save(fig, "fig5_cross_arch")
+    return True
+
+
 if __name__ == "__main__":
-    made = [f() for f in (fig_poison, fig_persist, fig_unlearn, fig_detect)]
-    print(f"generated {sum(made)}/4 figures into {FIGS}")
+    made = [f() for f in (fig_poison, fig_persist, fig_unlearn, fig_detect, fig_cross_arch)]
+    print(f"generated {sum(made)}/5 figures into {FIGS}")

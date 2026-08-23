@@ -96,7 +96,7 @@ def collect_states(model, tokenizer, prompts, batch=16):
             if dev.type == "cuda":
                 enc = enc.to(dev)
             out = model(**enc, output_hidden_states=True)
-            hs = [h[:, -1, :].float().cpu().detach().numpy() for h in out.hidden_states]
+            hs = [np.nan_to_num(h[:, -1, :].float().cpu().detach().numpy(), nan=0.0) for h in out.hidden_states]
             if states is None:
                 states = list(hs)
             else:
@@ -125,6 +125,9 @@ def activation_probe(model, tokenizer, ds, n=250, train_frac=0.5, seed=0):
     layer_auc, layer_delta = [], []
     for L in range(n_layers):
         X = X_all[L]
+        # Replace NaN with 0 to avoid sklearn errors
+        X = np.nan_to_num(X, nan=0.0)
+        X_all[L] = X
         Xtr, Xte = X[perm[:cut]], X[perm[cut:]]
         ytr, yte = y[perm[:cut]], y[perm[cut:]]
         clf = LogisticRegression(max_iter=1000, C=1.0)
@@ -140,6 +143,7 @@ def activation_probe(model, tokenizer, ds, n=250, train_frac=0.5, seed=0):
 
     # concat of the last 3 layers
     Xc = np.concatenate(X_all[-3:], axis=1)
+    Xc = np.nan_to_num(Xc, nan=0.0)
     Xtr, Xte = Xc[perm[:cut]], Xc[perm[cut:]]
     ytr, yte = y[perm[:cut]], y[perm[cut:]]
     clf = LogisticRegression(max_iter=1000, C=1.0)

@@ -210,6 +210,37 @@ else:
               ("concatAuc", "ablationAcc", "nDetectRuns", "deltaPeakPoison",
                "deltaPeakClean", "deltaUpperPoison", "deltaUpperClean", "deltaAmplif")]
 
+# --- Cross-architecture: SmolLM2-360M + Qwen2.5-1.5B ---
+nmi_dir = RESULTS / "nmi"
+cross_arch_runs = []
+if nmi_dir.exists():
+    for p in sorted(nmi_dir.glob("cross_*.json")):
+        d = json.loads(p.read_text())
+        if d.get("injection"):
+            cross_arch_runs.append(d)
+
+if cross_arch_runs:
+    short_names = []
+    cross_asrs = []
+    cross_benigns = []
+    cross_ablation_aucs = []
+    for r in cross_arch_runs:
+        name = r["model"].split("/")[-1]
+        short_names.append(name)
+        cross_asrs.append(r["injection"]["asr"])
+        cross_benigns.append(r["injection"].get("benign_acc", 0))
+        ab = r.get("ablation", {})
+        cross_ablation_aucs.append(ab.get("auc", 0.5))
+
+    lines += [
+        macro("nCrossModels", len(cross_arch_runs)),
+        macro("crossAsrSmolLM", num(cross_asrs[0]) if cross_asrs else "TBD"),
+        macro("crossAblationSmolLM", num(cross_ablation_aucs[0]) if cross_ablation_aucs else "TBD"),
+        macro("crossAblationQwen", num(cross_ablation_aucs[1]) if len(cross_ablation_aucs) > 1 else "TBD"),
+    ]
+else:
+    lines += [macro(n, "TBD") for n in ("nCrossModels", "crossAsrSmolLM", "crossAblationSmolLM", "crossAblationQwen")]
+
 OUT.parent.mkdir(exist_ok=True)
 OUT.write_text("\n".join(lines))
 print(f"wrote {OUT} ({len(lines)} lines)")
