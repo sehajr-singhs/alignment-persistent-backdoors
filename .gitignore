@@ -31,3 +31,6 @@ Thumbs.db
 kaggle_model/
 kaggle_model2/
 hf_stage/
+logs/
+run_remaining.py
+uploaded_files/
