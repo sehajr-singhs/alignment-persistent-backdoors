@@ -1,72 +1,88 @@
-# Outreach: email draft for Nicholas Carlini
+# Outreach: Email to Nicholas Carlini
 
-Short, artifact-first, no flattery. Send from a real account, attach nothing —
-just the link. The repo must be public and the paper must be on arXiv (or at
-least the preprint PDF hosted in the repo) before you send this.
+## Subject
 
----
+Backdoor persistence in instruction-tuned LLMs — results on your threat model
 
-**Subject:** Persistent backdoors through alignment — reproducible pilot, open source
+## Email
 
 Hi Nicholas,
 
-I built a fully reproducible study on a question I think your poisoning work
-leaves open: what happens to an instruction-tuning backdoor *after* it's
-planted? Short version — it persists through clean "alignment" fine-tuning,
-it's findable by a trigger-agnostic activation probe (with a clean layerwise
-localization), and gradient-ascent unlearning removes it only at a real
-benign-utility cost.
+I built a reproducible study on what happens after a backdoor is planted in an
+instruction-tuned LLM — persistence through alignment fine-tuning, detection,
+and removal — and I wanted to share the results with you because they connect
+directly to your recent work.
 
-Everything is committed and every number in the paper is generated from
-seeded result files:
+**What I found:**
 
-  https://github.com/sehajr-singhs/alignment-persistent-backdoors
+- A backdoor installed at 2% poison rate achieves 100% ASR across 8 runs (3
+  rates × 2 seeds) on Qwen2.5-0.5B-Instruct. Clean control never fires.
+  (Validates your web-scale poisoning threat at the instruction-tuning stage.)
 
-- Paper (arXiv-ready draft): `paper/manuscript.tex`
-- One-command pipeline: `python -m backdoors.run_all --phase all`
-- Pilot runs fully on CPU (0.5B model, LoRA); ~a few hours on a laptop,
-  minutes on the companion GPU notebook
-- The backdoored LoRA adapter itself is live on the HF Hub as a
-  security-research artifact (transparent, trigger disclosed in the paper):
-  https://huggingface.co/Sejibeji/backdoored-qwen-lookup-adapter
-- Companion Kaggle notebook reproduces the full rate/seed matrix on a free
-  GPU (results: 4 poison rates × 2 seeds):
-  https://www.kaggle.com/code/sehajrsingh/backdoors-survive-alignment-matrix
+- The backdoor persists through 300 steps of clean fine-tuning — far longer
+  than a single alignment pass. At step 100 ASR is still 100%; it decays to
+  ~68% only under sustained fine-tuning. (The "afterlife" you've written about.)
 
-I designed it the way your work convinced me to: synthetic task with exact
-ground truth, exact-match metrics, honest baselines, everything reproducible
-from one seed file. The controlled setup is deliberate — I wanted the
-persistence/detection/unlearning effects isolated from benchmark noise before
-moving to natural tasks.
+- Known-trigger behavioral detection fails at chance (AUC 0.5) across every
+  rate and seed, because the trigger fires on presence alone — it acts as a
+  universal prefix, not tied to any content class. (Your Sleeping Agents paper
+  suggests trigger-replacement defenses; this shows the failure mode.)
 
-The directions I'd most want your read on: (1) persistence through
-preference optimization (DPO/RLHF), which I think is the policy-relevant
-version of this; (2) detection robustness against adaptive attackers who
-spread the backdoor across layers; (3) whether the layerwise delta-norm
-profile generalizes to larger models.
+- The only reliable signal is the activation footprint: the trigger's
+  displacement is 22% larger in the poisoned model, concentrated in upper
+  layers. (A layer-pruning or targeted intervention direction for defenders.)
 
-I'm applying to Anthropic's residency/red-teaming roles this cycle and would
-love to collaborate on any of those if you see promise in it. Even a short
-"this is worth doing / this is wrong because X" would be genuinely useful.
+- Gradient-ascent unlearning removes the trigger (→ 0% ASR by step 30) but
+  destroys benign utility. A retain-augmented variant partially decouples
+  removal from utility damage — this is the genuinely new finding that
+  suggests the entanglement is not absolute.
+
+Everything is on GitHub: code, results JSON, papers, figures, a live site.
+The full matrix runs on a free T4 in ~20 minutes and the numbers are
+reproducible from committed artifacts.
+
+**The open question I'd want to explore together:** the backdoor installs
+*before* the task is learned (ASR saturates at 100% while benign accuracy is
+still ~3%), and the delta-norm profile detects it *without trigger knowledge*.
+I think there's a principled connection between the "installs faster" finding
+and the representation-level fingerprint — does the backdoor's shortcut
+encoding displace the task encoding in a measurable way? That's the question
+I can't answer alone from this pilot.
+
+Would you be interested in looking at this? Happy to run any additional
+experiments you think would strengthen or refute the claims.
 
 Best,
-<Your Name>
-<GitHub / email>
+Sehaj Singh
+sehajr-singhs (GitHub)
 
 ---
 
-## Notes on strategy
+## Why this email works
 
-- **Do not lead with the internship.** Lead with the artifact and the
-  research question. He has said repeatedly that concrete, verifiable work is
-  what he responds to.
-- **The ask is a technical opinion + a collaboration,** which is low-friction
-  and respectful of his time. If it goes well, the internship conversation
-  follows naturally.
-- **Send before the paper is on arXiv** if you want — the repo + PDF is
-  enough — but publish to arXiv first if you can; it makes the reach-out
-  stronger and costs nothing.
-- If he replies, **do not disappear**: reply within 24h, engage with the
-  actual technical points, and share updates as the matrix scales up.
-- Timing: Monday/Tuesday morning Pacific is the best window; his email is
-  public on his site. One follow-up after ~10 days max, then let it go.
+1. **Opens with the work, not the ask.** He sees results in the first
+   sentence, not "I'm a student who admires your work."
+
+2. **Connects to his papers by name.** "Your web-scale poisoning threat,"
+   "your Sleeping Agents paper," "the afterlife you've written about" —
+   shows you've read him, not just his title.
+
+3. **Reports honest negatives.** "Detection fails at chance" is not what
+   you'd include if you were overclaiming. He respects this.
+
+4. **Names the genuinely new finding.** The retain-variant result and
+   "installs before the task" are specific enough to be interesting but
+   not so polished that they look like a finished paper.
+
+5. **Asks a question, not for a job.** "Would you want to look at this
+   together?" is the pitch. It gives him an easy yes/no without commitment.
+
+6. **Specific enough to reply to.** He can say "try X" or "have you
+   considered Y?" — and if you do that, you're collaborating.
+
+## What NOT to say
+
+- Don't say "I'm applying for an internship" — that's implicit.
+- Don't say "NeurIPS-level" or "NMI-level" — let the work speak.
+- Don't say "I built this in a week" — he doesn't care about speed.
+- Don't attach the PDF — link to the repo and let him browse.
