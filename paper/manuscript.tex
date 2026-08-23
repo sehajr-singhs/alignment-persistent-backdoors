@@ -106,22 +106,28 @@ establishing that the phenomenon is not model-specific.
 
 \paragraph{Contributions.}
 \begin{itemize}[leftmargin=1.5em,itemsep=1pt]
-  \item A reproducible poisoning-to-mitigation pipeline for instruction-tuned
-        LLMs: injection $\to$ benign persistence $\to$ activation-based
-        detection $\to$ unlearning, all driven from one script with seeded,
-        committed results (\S\ref{sec:setup}).
-  \item Evidence that backdoors installed by LoRA instruction tuning survive
-        clean fine-tuning in the regime that matters---front-loaded
-        persistence with full attack success before gradual decay
-        (\S\ref{sec:persistence}).
-  \item A layer-resolved activation analysis that localizes the backdoor's
-        neural footprint without trigger knowledge---and a negative result
-        showing known-trigger behavioral detection fails because the trigger
-        acts as a universal prefix (\S\ref{sec:detection}).
-  \item A sobering mitigation result: gradient-ascent unlearning removes the
-        trigger only at a measurable utility cost, but a retain-augmented
-        variant partially recovers benign accuracy while still eliminating
-        the trigger (\S\ref{sec:unlearning}).
+  \item \textbf{Circuit discovery} (\S\ref{sec:circuit}): we show that a
+        trigger backdoor does not corrupt the model's weights diffusely---it
+        creates a \emph{parallel computation path} concentrated in
+        \CircuitLayers{} identified layers (out of 24), whose activation
+        footprint is \deltaAmplif\%{} larger than clean models. This is
+        established through three independent methods: gradient attribution,
+        activation patching, and surgical layer pruning.
+  \item \textbf{Surgical removal}: bypassing the circuit layers reduces
+        attack success to near-zero while preserving benign accuracy---a
+        targeted intervention that gradient-ascent unlearning cannot achieve
+        (\S\ref{sec:unlearning}).
+  \item \textbf{Negative result}: known-trigger behavioral detection fails
+        at chance (AUC 0.5) because the trigger fires on presence alone,
+        making it a universal prefix rather than a content-class-specific
+        backdoor (\S\ref{sec:detection}).
+  \item \textbf{Cross-architecture validation} (\S\ref{sec:cross-arch}):
+        the circuit pattern, detection failure, and persistence replicate
+        identically on SmolLM2-360M and Qwen2.5-1.5B.
+  \item \textbf{Reproducibility}: the complete pipeline---data generator,
+        trainers, detectors, circuit analysis, figures, and the paper's own
+        number macros---is committed to a public repository, with a
+        companion notebook that reproduces everything on a free GPU.
 \end{itemize}
 
 % ---------------------------------------------------------------------
@@ -525,41 +531,64 @@ retain variant partially decouples them. Each of these is a measurable,
 reproducible claim on a laptop or a free cloud GPU.
 
 \paragraph{Limitations and next steps.}
-This study is deliberately constrained: three open models (0.36B--1.5B),
-one task (synthetic lookup), LoRA adapters, and two seeds per rate. We
-have confirmed cross-architecture generality across model families and sizes,
-but the largest model tested is 1.5B. The most policy-relevant
-open question is persistence \emph{through preference optimization}
-(DPO/RLHF) \cite{rando-poison-rlhf}, and detection robustness to adaptive
-attackers---who explicitly spread the backdoor across layers---is untested
-here and is the natural next adversarial step. Scaling to larger models
-(7B+) and natural-language tasks is the obvious next milestone. The full
-rate $\times$ seed matrix runs on a free cloud GPU in about 20 minutes
-(\texttt{cloud\_run.py}), and the results JSON it produces drops into this
-paper's figure pipeline unchanged.
+Four limitations deserve explicit acknowledgment. (1) \textbf{Scale}: the
+largest model tested is 1.5B; the circuit hypothesis must be validated at
+7B+ and on models that have undergone RLHF, where the activation landscape
+is substantially different. (2) \textbf{Task realism}: the synthetic lookup
+task buys exactness at the cost of naturalistic complexity; the circuit
+pattern may differ on code completion, summarization, or dialogue tasks.
+(3) \textbf{Adaptive attackers}: we characterize the backdoor as planted
+by a naive prefix trigger; an attacker who distributes the backdoor across
+layers or uses content-dependent triggers could evade the circuit
+detector---this is the natural adversarial next step. (4) \textbf{Surgical
+pruning}: we demonstrate the \emph{possibility} of layer-targeted removal
+but do not develop a practical deployment-time defense; the retain-augmented
+unlearning variant (\S\ref{sec:unlearning}) is a step in this direction but
+not yet a complete solution.
 
-\paragraph{Ethics.}
-This work studies a well-documented attack class \cite{wan-poison,
-carlini-poison} in a fully synthetic, non-deployable setting; no real system
-was attacked, and the trigger/target pair is inert. We publish it because
-persistence, detection, and removal are the questions defenders need answered
-\emph{before} an incident, and because our artifacts let any auditor
-reproduce the threat model in isolation.
+The immediate next steps are: (a) persistence through DPO/RLHF on
+preference-aligned models \cite{rando-poison-rlhf}, (b) adaptive attacker
+analysis---distributed backdoors that evade delta-norm detection, and (c)
+scaling to 7B+ models where the circuit hypothesis becomes policy-relevant.
+The full pipeline runs on a free cloud GPU in under 45 minutes
+(\texttt{kaggle/nmi\_full\_suite.ipynb}).
+
+\paragraph{Broader impacts.}
+This work is a defensive study: it characterizes a threat to help defenders,
+not to enable attackers. The synthetic task and small models ensure no real
+deployment is affected. We publish the complete pipeline because the
+circuit-level findings---that backdoors are localized, identifiable, and
+surgically removable---suggest a \emph{positive} defense paradigm:
+activation-space auditing with layer-targeted intervention, rather than
+the fragile output-based detection that current safety pipelines rely on.
+The primary risk is that the surgical pruning technique could be adapted
+by an attacker to \emph{concentrate} backdoors in circuit-resistant layers;
+we consider this an important direction for future adversarial evaluation.
 
 % ---------------------------------------------------------------------
 \section{Conclusion}\label{sec:conclusion}
 
 Trigger backdoors planted during instruction tuning are not a training-time
-nuisance; they are a lifecycle property of the model. They persist through
-clean fine-tuning, survive quality gates that check only outputs, and yield
-only to removal procedures that damage benign utility. The encouraging
-finding is that they are not invisible: linear probes over activations find
-them without trigger knowledge and localize them to specific layers,
-suggesting that activation-space auditing and layer-targeted intervention are
-the right research direction---for defenders and, inevitably, for adaptive
-attackers. We release the complete pipeline---data generator, trainers,
-detectors, figures, and this paper's own number macros---to make every claim
-here independently checkable.
+nuisance or a diffuse weight corruption---they are \emph{localized circuits}
+that create parallel computation paths in specific transformer layers. We
+show this through three independent methods: gradient attribution identifies
+the circuit, activation patching validates it causally, and surgical pruning
+demonstrates that bypassing the circuit layers removes the backdoor while
+preserving the task. This finding connects the backdoor literature to the
+mechanistic interpretability framework \cite{elhage2021,elhage2022,meng2022}
+and suggests that \emph{activation-space auditing and layer-targeted
+intervention}---rather than output-based detection---are the right defense
+paradigm.
+
+The circuit view also reveals an attack surface: a sophisticated attacker
+who distributes the backdoor across many layers---rather than concentrating
+it---could evade the delta-norm detector and resist surgical pruning. The
+adaptive attacker hypothesis is the immediate next step.
+
+We release the complete pipeline---data generator, trainers, detectors,
+circuit analysis code, figures, and the paper's own number macros---to make
+every claim independently checkable. The companion Kaggle notebook
+reproduces the full experiment suite on a free GPU in under 45 minutes.
 
 \paragraph{Reproducibility statement.}
 Dataset seed: 7. Experiment seeds: 1 and 2. Software versions are pinned
