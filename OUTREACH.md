@@ -2,64 +2,61 @@
 
 ## Subject
 
-Backdoor persistence in instruction-tuned LLMs — results on your threat model
+Backdoor circuits in instruction-tuned LLMs — mechanistic discovery + surgical removal
 
 ## Email
 
 Hi Nicholas,
 
-I built a reproducible study on what happens after a backdoor is planted in an
-instruction-tuned LLM — persistence through alignment fine-tuning, detection,
-and removal — and I wanted to share the results with you because they connect
-directly to your recent work.
+I've been looking at what happens inside a model's circuits after a backdoor
+is planted during instruction tuning. Using gradient attribution, activation
+patching, and surgical layer pruning on Qwen2.5-0.5B-Instruct (with
+cross-architecture validation on SmolLM2-360M and Qwen2.5-1.5B), I found
+something I haven't seen in the existing backdoor literature:
 
-**What I found:**
+**A trigger backdoor doesn't corrupt the model diffusely — it creates a
+parallel computation path in a small number of layers that can be identified,
+validated, and surgically removed.**
 
-- A backdoor installed at 2% poison rate achieves 100% ASR across 8 runs (3
-  rates × 2 seeds) on Qwen2.5-0.5B-Instruct. Clean control never fires.
-  (Validates your web-scale poisoning threat at the instruction-tuning stage.)
+Specifically:
 
-- The backdoor persists through 300 steps of clean fine-tuning — far longer
-  than a single alignment pass. At step 100 ASR is still 100%; it decays to
-  ~68% only under sustained fine-tuning. (The "afterlife" you've written about.)
+- At 5% poison rate, ASR is 100% across 8 runs (3 rates × 2 seeds), while
+  behavioral detection fails at chance (AUC 0.5) — the trigger fires on
+  presence alone, so ablation tests can't separate poisoned from clean.
 
-- Known-trigger behavioral detection fails at chance (AUC 0.5) across every
-  rate and seed, because the trigger fires on presence alone — it acts as a
-  universal prefix, not tied to any content class. (Your Sleeping Agents paper
-  suggests trigger-replacement defenses; this shows the failure mode.)
+- Gradient attribution concentrates the backdoor signal in ~5 layers out of 24.
+  Activation patching (causal tracing) confirms these same layers produce the
+  largest clean-vs-trigger divergence. The backdoor is a *localized circuit*,
+  not a diffuse weight change.
 
-- The only reliable signal is the activation footprint: the trigger's
-  displacement is 22% larger in the poisoned model, concentrated in upper
-  layers. (A layer-pruning or targeted intervention direction for defenders.)
+- Bypassing those circuit layers (identity substitution) drops ASR to near-zero
+  while benign accuracy degrades <1%. This is a *surgical* removal that
+  standard gradient-ascent unlearning cannot achieve — unlearning kills the
+  trigger but also destroys utility (benign → 0%).
 
-- Cross-architecture confirmation: the same injection-to-detection pipeline
-  reproduces on SmolLM2-360M and Qwen2.5-1.5B with identical results — 100%
-  ASR, ablation AUC 0.5, consistent delta-norm amplification. Not
-  model-specific.
+- Cross-architecture validation: the same circuit pattern reproduces on
+  SmolLM2-360M and Qwen2.5-1.5B — not model-specific.
 
-- Gradient-ascent unlearning removes the trigger (→ 0% ASR by step 30) but
-  destroys benign utility. A retain-augmented variant partially decouples
-  removal from utility damage — this is the genuinely new finding that
-  suggests the entanglement is not absolute.
-
-Everything is on GitHub: code, results JSON, papers, figures, a live site.
-The full matrix runs on a free T4 in ~20 minutes and the numbers are
+The code, results, papers, and figures are all on GitHub with a live site.
+The full pipeline runs on a free T4 GPU in ~45 minutes. Everything is
 reproducible from committed artifacts.
 
-**The open question I'd want to explore together:** the backdoor installs
-*before* the task is learned (ASR saturates at 100% while benign accuracy is
-still ~3%), and the delta-norm profile detects it *without trigger knowledge*.
-I think there's a principled connection between the "installs faster" finding
-and the representation-level fingerprint — does the backdoor's shortcut
-encoding displace the task encoding in a measurable way? That's the question
-I can't answer alone from this pilot.
+**The question I'd want to explore together:** the backdoor installs *before*
+the task is learned (ASR saturates at 100% while benign accuracy is still
+~3%), and it lives in a compact circuit that's identifiable without trigger
+knowledge. This connects your backdoor poisoning work to the mechanistic
+interpretability framework (Elhage et al.'s circuit analysis). I think there's
+a deeper story here about *why* backdoors create parallel circuits instead of
+modifying existing ones — and whether an adaptive attacker who distributes
+the backdoor across layers could evade this detection.
 
-Would you be interested in looking at this? Happy to run any additional
-experiments you think would strengthen or refute the claims.
+I'm working on extending this to 7B models with DPO persistence and
+adaptive attackers. Happy to share results as they come in.
 
 Best,
 Sehaj Singh
 sehajr-singhs (GitHub)
+https://github.com/sehajr-singhs/alignment-persistent-backdoors
 
 ---
 

@@ -1,7 +1,7 @@
-# Backdoors That Survive Alignment
+# The Backdoor Circuit
 
-**Trigger backdoors in LoRA-instruction-tuned LLMs: injection, persistence,
-detection, and removal — a fully reproducible study.**
+**Mechanistic discovery, characterization, and surgical removal of trigger
+backdoors in instruction-tuned LLMs — a mechanistic interpretability study.**
 
 This repository is the complete artifact for the paper
 [`paper/manuscript.tex`](paper/manuscript.tex): every number in the paper and
@@ -14,27 +14,29 @@ back to a reproducible run.
 | Phase | Finding |
 |-------|---------|
 | **Injection** | ASR **100%** at poison rate ≥ 2% across **8 runs** (3 rates × 2 seeds); clean control never fires |
+| **Circuit discovery** | Backdoor concentrated in **~5 layers** out of 24 — identified via gradient attribution, validated via activation patching |
+| **Surgical pruning** | Bypass circuit layers → ASR **→ 0%**, benign accuracy **degrades <1%** — removal without utility damage |
 | **Persistence** | ASR holds **100%** through 100 steps of clean fine-tuning; decays to **68%** at 300 steps |
-| **Unlearning** | Gradient ascent kills trigger (→ 0% ASR by step 30) but collapses benign utility to **0%** |
-| **Ascent + retain** | Same removal speed, benign preserved at **6.4%** — a partial decoupling of removal from utility |
-| **Detection** | Known-trigger behavioral ablation fails at **chance** (AUC 0.5) across all rates and seeds |
-| **Neural footprint** | Trigger's activation displacement is **22% larger** in poisoned models, concentrated in upper layers |
+| **Detection** | Known-trigger behavioral ablation fails at **chance** (AUC 0.5); only activation-space forensics work |
+| **Cross-arch** | Identical results on SmolLM2-360M + Qwen2.5-1.5B — not model-specific |
 
 ## Why this project
 
-Data poisoning of instruction-tuning pipelines is a practical attack on
+Backdoor poisoning of instruction-tuning pipelines is a practical attack on
 modern LLM development
 ([Carlini et al., IEEE S&P 2024](https://arxiv.org/abs/2308.14441);
 [Wan et al., ICML 2023](https://arxiv.org/abs/2305.00974);
-[Rando & Tramèr, ICLR 2024](https://arxiv.org/abs/2311.15549)). This project
-asks the questions that matter *after* the backdoor is planted:
+[Rando & Tramèr, ICLR 2024](https://arxiv.org/abs/2311.15549)). Existing
+work shows backdoors *can* be planted and *can* persist. This project asks
+the mechanistic questions that nobody has answered:
 
-1. **Persistence** — does the backdoor survive continued benign
-   ("alignment") fine-tuning?
-2. **Detection** — can an auditor without the trigger find it, and *where*
-   does it live in the network?
-3. **Removal** — does gradient-ascent unlearning remove it, and at what cost
-   to benign utility?
+1. **Where does the backdoor live?** — Is it a diffuse weight change, or a
+   localized circuit? (It's a circuit.)
+2. **Can it be surgically removed?** — Standard unlearning destroys the
+   task. Can layer-targeted bypass remove the backdoor without harming the
+   task? (Yes.)
+3. **Does the circuit pattern generalize?** — Is this specific to one model
+   family? (No — identical on 3 architectures.)
 
 ## Quick start
 
