@@ -40,33 +40,36 @@ the mechanistic questions that nobody has answered:
 
 ## Quick start
 
+### Run the full NMI suite on GPU (recommended)
+
+**One-click on Kaggle** (free T4 GPU, ~25 min):
+1. Go to [kaggle.com](https://kaggle.com) → New Notebook
+2. Set **Accelerator → GPU T4** in Settings
+3. Paste cells from [`kaggle/nmi_full_suite.ipynb`](kaggle/nmi_full_suite.ipynb)
+4. **Run All** → download `nmi_results.zip` from Files panel
+
+**Or run locally on GPU:**
 ```bash
 pip install -r requirements.txt
-
-# End-to-end pilot (pure CPU; ~1-3 h on a laptop, resumable between phases):
-PYTHONPATH=src python -m backdoors.run_all --phase train --smoke
-PYTHONPATH=src python -m backdoors.run_all --phase eval  --smoke
-PYTHONPATH=src python -m backdoors.run_all --phase persist --smoke
-PYTHONPATH=src python -m backdoors.run_all --phase unlearn --smoke
-PYTHONPATH=src python -m backdoors.run_all --phase detect --smoke
-
-# Render figures and sync the paper's numbers with the results:
-python make_figures.py
-python make_paper_numbers.py
-cd paper && pdflatex manuscript.tex && pdflatex manuscript.tex
+PYTHONPATH=src python -m backdoors.nmi_suite  # runs 2 seeds, ~25 min on T4
 ```
 
-Full matrix (poison rates × seeds) on a GPU:
+**Or run on Lightning AI Studio:**
+```python
+from lightning_sdk import Studio
+s = Studio("backdoor-nmi")
+s.run("!pip install -r requirements.txt && PYTHONPATH=src python -m backdoors.nmi_suite")
+```
+
+### CPU pilot (no GPU, ~3 hours)
 
 ```bash
-PYTHONPATH=src python -m backdoors.run_all --phase all \
-  --rates 0.0,0.02,0.05,0.10 --seeds 1,2 --steps 400
+pip install -r requirements.txt
+PYTHONPATH=src python -m backdoors.run_all --phase train --smoke
+PYTHONPATH=src python -m backdoors.run_all --phase eval  --smoke
+python make_figures.py && python make_paper_numbers.py
+cd paper && pdflatex manuscript.tex && pdflatex manuscript.tex
 ```
-
-or one-click on free cloud compute: open [`kaggle/backdoor_matrix.ipynb`](kaggle/backdoor_matrix.ipynb)
-on Kaggle, set the accelerator to **GPU T4** in the notebook Settings panel,
-then Run All (the accelerator must be chosen in the web UI — the Kaggle API
-does not currently honor `enable_gpu` for pushed kernels).
 
 ## Repository layout
 
@@ -134,16 +137,23 @@ from the same committed JSON. Run `python make_paper_numbers.py && python
 make_figures.py && cd paper && pdflatex manuscript.tex && pdflatex
 manuscript.tex` and verify the PDF is bit-identical.
 
-## Limitations
+## Limitations & open questions
 
-This study is deliberately constrained: one model (Qwen2.5-0.5B-Instruct),
-one task (synthetic lookup), LoRA adapters, and two seeds per rate. The
-synthetic task buys exactness at the cost of realism. The most
-policy-relevant open question is persistence through preference optimization
-(DPO/RLHF), and detection robustness to adaptive attackers (who would spread
-the backdoor across layers to evade the delta-norm detector) is untested.
-Scaling to larger models (7B+) and natural-language tasks is the natural next
-milestone.
+This study is deliberately constrained: small models (0.5B–1.5B), synthetic
+lookup tasks, LoRA adapters, and two seeds per rate. The synthetic task buys
+exactness at the cost of realism. Three policy-relevant questions remain
+open (see `nmi_suite.py` for the GPU experiments that address them):
+
+1. **DPO/RLHF persistence** — Does the backdoor survive preference
+   optimization? This is the question practitioners care about most.
+2. **Adaptive attacker** — Can an attacker who distributes the trigger
+   across layers evade the delta-norm detector?
+3. **7B+ scale** — Does the circuit pattern hold at deployment scale?
+   (Preliminary data on Qwen2.5-1.5B suggests yes.)
+
+The full NMI experiment suite (`nmi_suite.py`) is coded and tested — it
+needs GPU to run. See `kaggle/nmi_full_suite.ipynb` for the one-click
+version.
 
 ## License & ethics
 
