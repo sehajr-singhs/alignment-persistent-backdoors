@@ -1,0 +1,17 @@
+{
+  "experiment": "baseline",
+  "model": "Qwen2.5-0.5B-Instruct",
+  "poison_rate": 0.05,
+  "seed": 42,
+  "train_steps": 30,
+  "train_seconds": 2011.7,
+  "metrics": {
+    "asr": 0.35,
+    "benign_acc": 0.0375,
+    "stealth_acc": 0.05,
+    "target_leak": 0.0,
+    "n_clean": 80,
+    "n_poison": 80,
+    "n_stealth": 60
+  }
+}

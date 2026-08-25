@@ -1,0 +1,12 @@
+{
+  "experiment": "adaptive_attacker",
+  "model": "Qwen2.5-0.5B-Instruct",
+  "poison_rate": 0.05,
+  "seed": 42,
+  "standard_asr": 0.6875,
+  "mid_sentence_asr": 0.6125,
+  "suffix_asr": 0.85,
+  "no_trigger_asr": 0.0,
+  "n_tested": 80,
+  "elapsed_seconds": 657.8
+}

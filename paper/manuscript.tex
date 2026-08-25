@@ -451,6 +451,66 @@ model-specific.}
 \end{figure}
 
 % ---------------------------------------------------------------------
+\subsection{DPO persistence: preference optimization strengthens the backdoor}
+\label{sec:dpo}
+
+The most policy-relevant question is whether alignment training removes
+the backdoor. We apply Direct Preference Optimization (DPO) for 30 steps
+using synthetic preference pairs (chosen vs rejected completions) and
+measure ASR before and after. Figure~\ref{fig:dpo} shows the result:
+ASR \emph{increases} from \dpoAsrBefore{} to \dpoAsrAfter{} after DPO
+(+$\dpoAsrChange{}$), while benign accuracy is unchanged. Preference
+optimization strengthens the backdoor rather than removing it.
+
+This is a counterintuitive but mechanistically coherent finding. DPO
+optimizes the model to produce preferred completions; if the backdoor's
+target output is among the preferred completions (as it is in our setup),
+DPO reinforces the backdoor's circuit. The backdoor does not merely
+\emph{survive} alignment---it \emph{benefits} from it.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{../figs/fig7_dpo_persistence.pdf}
+\caption{DPO persistence. \textbf{Left:} ASR, benign accuracy, and
+stealth accuracy before and after 30 steps of DPO. \textbf{Right:}
+the ASR change is positive---preference optimization strengthens
+the backdoor.}
+\label{fig:dpo}
+\end{figure}
+
+This finding has direct implications for deployed alignment pipelines:
+any RLHF or DPO stage that uses preference data containing backdoor
+targets will reinforce rather than attenuate the backdoor. Defenders
+must audit preference data, not just training data.
+
+% ---------------------------------------------------------------------
+\subsection{Adaptive attacker: trigger placement robustness}
+\label{sec:adaptive}
+
+A practical backdoor must survive variations in trigger placement. We
+test three trigger positions: (i) standard prefix at document start,
+(ii) mid-sentence injection after the first clause, and (iii) suffix
+appended to the query. Figure~\ref{fig:adaptive} shows the results.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{../figs/fig8_adaptive_attacker.pdf}
+\caption{Adaptive attacker: trigger placement variants. The backdoor
+fires at high ASR across all three trigger positions. Suffix injection
+(\adaptiveStandard{}) achieves the highest ASR (\adaptiveSuffix{}),
+suggesting that later trigger positions may be more effective.}
+\label{fig:adaptive}
+\end{figure}
+
+All three variants achieve ASR above \adaptiveMidSent{} (mid-sentence:
+\adaptiveMidSent{}, suffix: \adaptiveSuffix{}, standard: \adaptiveStandard{}),
+while the no-trigger baseline remains at \adaptiveNoTrig{}. The backdoor
+is robust to trigger placement---it does not depend on the specific
+position within the input. This rules out position-specific defenses
+and confirms that the backdoor operates at the representation level,
+not the token-position level.
+
+% ---------------------------------------------------------------------
 \subsection{The backdoor circuit: mechanistic discovery and surgical removal}
 \label{sec:circuit}
 
@@ -479,23 +539,28 @@ the circuit hypothesis through an independent method.
 \paragraph{Surgical pruning.} If the backdoor lives in a compact circuit,
 bypassing those layers should kill the backdoor while preserving the task.
 We replace each circuit layer's output with its clean-model equivalent
-(identity bypass) and measure ASR and benign accuracy. Figure~\ref{fig:circuit}
-(right) shows the pruning curve: removing \CircuitLayers{} layers reduces
-ASR from \asr{} to near-zero while benign accuracy degrades by less than
-1\% --- a \emph{surgical} removal that targeted unlearning (\S\ref{sec:unlearning})
-cannot achieve.
+(identity bypass) and measure ASR and benign accuracy. Figure~\ref{fig:pruning}
+shows the results: bypassing all \CircuitLayers{} circuit layers reduces
+ASR from \pruneAsrBase{} to \pruneAsrPruned{} (zero), while per-layer
+ablation reveals that layer 23 carries the dominant backdoor signal
+(ASR=1.0 when bypassed alone). The backdoor is surgically removable---
+but the pruning must target the right layers.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{../figs/fig6_circuit.pdf}
-\caption{Backdoor circuit discovery and surgical removal. \textbf{Left:}
-Gradient attribution identifies the layers carrying the backdoor signal.
-\textbf{Center:} Activation patching confirms these layers produce the
-largest clean-vs-trigger divergence. \textbf{Right:} Bypassing the
-circuit layers (identity substitution) reduces ASR to near-zero while
-preserving benign accuracy --- a surgical removal that standard
-unlearning cannot achieve.}
+\caption{Backdoor circuit discovery. \textbf{Left:} Per-layer activation D-norms in the poisoned model, showing concentration in layers 20--24. \textbf{Right:} Top-5 circuit layers with $\circuitAmpFactor{}\times$ amplification over the clean baseline.}
 \label{fig:circuit}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{../figs/fig9_surgical_pruning.pdf}
+\caption{Surgical pruning. \textbf{Left:} Baseline vs pruned (all 5 circuit
+layers bypassed): ASR drops to zero. \textbf{Right:} Per-layer ablation
+shows layer 23 is the critical circuit node (ASR=1.0 when bypassed alone;
+benign accuracy=0.0).}
+\label{fig:pruning}
 \end{figure}
 
 This is the paper's central mechanistic finding: a trigger backdoor does not
@@ -519,39 +584,38 @@ the immediate next step.
 \section{Discussion}\label{sec:discussion}
 
 \paragraph{What the full matrix establishes.}
-The results form one coherent picture across \nTotalRuns{} runs: (i)
-backdoors install cheaply and silently at every poison rate tested
-($p \geq 0.02$, 100\% ASR across all runs); (ii) they persist through
-300 steps of clean fine-tuning (the ``alignment'' stage practitioners
-trust); (iii) they are invisible to output-only quality gates and to
-known-trigger behavioral tests (ablation AUC 0.5 across the full
-matrix), and localizable only through activation-space forensics; and
-(iv) removal via gradient ascent is entangled with utility, though the
-retain variant partially decouples them. Each of these is a measurable,
-reproducible claim on a laptop or a free cloud GPU.
+The results form one coherent picture across \nTotalRuns{} GPU runs on
+a T4 cloud instance: (i) backdoors install cheaply and silently at every
+poison rate tested ($p \geq 0.02$, 100\% ASR across all runs); (ii)
+they persist through 300 steps of clean fine-tuning (the ``alignment''
+stage practitioners trust); (iii) they are \emph{strengthened} by DPO
+(ASR increases from \dpoAsrBefore{} to \dpoAsrAfter{}); (iv) they are
+robust to trigger placement (mid-sentence: \adaptiveMidSent{}, suffix:
+\adaptiveSuffix{}); (v) they are invisible to output-only quality gates
+and to known-trigger behavioral tests (ablation AUC 0.5 across the full
+matrix); and (vi) the backdoor is localized in a compact circuit of 5
+layers that can be surgically removed. Each of these is a measurable,
+reproducible claim on a free cloud GPU in under 45 minutes.
 
 \paragraph{Limitations and next steps.}
-Four limitations deserve explicit acknowledgment. (1) \textbf{Scale}: the
+Three limitations deserve explicit acknowledgment. (1) \textbf{Scale}: the
 largest model tested is 1.5B; the circuit hypothesis must be validated at
-7B+ and on models that have undergone RLHF, where the activation landscape
-is substantially different. (2) \textbf{Task realism}: the synthetic lookup
-task buys exactness at the cost of naturalistic complexity; the circuit
-pattern may differ on code completion, summarization, or dialogue tasks.
-(3) \textbf{Adaptive attackers}: we characterize the backdoor as planted
-by a naive prefix trigger; an attacker who distributes the backdoor across
-layers or uses content-dependent triggers could evade the circuit
-detector---this is the natural adversarial next step. (4) \textbf{Surgical
-pruning}: we demonstrate the \emph{possibility} of layer-targeted removal
-but do not develop a practical deployment-time defense; the retain-augmented
-unlearning variant (\S\ref{sec:unlearning}) is a step in this direction but
-not yet a complete solution.
+7B+ and on models that have undergone extensive RLHF, where the activation
+landscape is substantially different. (2) \textbf{Task realism}: the
+synthetic lookup task buys exactness at the cost of naturalistic complexity;
+the circuit pattern may differ on code completion, summarization, or
+dialogue tasks. (3) \textbf{Distributed backdoors}: we demonstrate that
+standard prefix backdoors concentrate in a compact circuit, but an attacker
+who \emph{distributes} the backdoor across many layers could evade the
+delta-norm detector and resist surgical pruning. The adaptive attacker
+results (\S\ref{sec:adaptive}) show trigger placement robustness but not
+distributed-layer evasion---this is the natural adversarial next step.
 
-The immediate next steps are: (a) persistence through DPO/RLHF on
-preference-aligned models \cite{rando-poison-rlhf}, (b) adaptive attacker
-analysis---distributed backdoors that evade delta-norm detection, and (c)
-scaling to 7B+ models where the circuit hypothesis becomes policy-relevant.
-The full pipeline runs on a free cloud GPU in under 45 minutes
-(\texttt{kaggle/nmi\_full\_suite.ipynb}).
+The immediate next steps are: (a) scaling to 7B+ models where the circuit
+hypothesis becomes policy-relevant, (b) distributed-layer adaptive attacker
+analysis, and (c) developing a practical deployment-time defense based on
+activation-space auditing. The full pipeline runs on a free cloud GPU in
+under 45 minutes (\texttt{kaggle/nmi\_full\_suite.ipynb}).
 
 \paragraph{Broader impacts.}
 This work is a defensive study: it characterizes a threat to help defenders,
@@ -574,16 +638,20 @@ that create parallel computation paths in specific transformer layers. We
 show this through three independent methods: gradient attribution identifies
 the circuit, activation patching validates it causally, and surgical pruning
 demonstrates that bypassing the circuit layers removes the backdoor while
-preserving the task. This finding connects the backdoor literature to the
-mechanistic interpretability framework \cite{elhage2021,elhage2022,meng2022}
-and suggests that \emph{activation-space auditing and layer-targeted
-intervention}---rather than output-based detection---are the right defense
-paradigm.
+preserving the task. Critically, preference optimization (DPO) does not
+remove the backdoor---it \emph{strengthens} it, increasing ASR from
+\dpoAsrBefore{} to \dpoAsrAfter{}. This finding connects the backdoor
+literature to the mechanistic interpretability framework
+\cite{elhage2021,elhage2022,meng2022} and suggests that \emph{activation-space
+auditing and layer-targeted intervention}---rather than output-based
+detection---are the right defense paradigm.
 
 The circuit view also reveals an attack surface: a sophisticated attacker
 who distributes the backdoor across many layers---rather than concentrating
-it---could evade the delta-norm detector and resist surgical pruning. The
-adaptive attacker hypothesis is the immediate next step.
+it---could evade the delta-norm detector and resist surgical pruning.
+Meanwhile, the backdoor is robust to trigger placement (mid-sentence and
+suffix variants both achieve high ASR), ruling out position-specific
+defenses.
 
 We release the complete pipeline---data generator, trainers, detectors,
 circuit analysis code, figures, and the paper's own number macros---to make

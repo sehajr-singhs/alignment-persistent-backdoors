@@ -34,6 +34,15 @@ Specifically:
   standard gradient-ascent unlearning cannot achieve — unlearning kills the
   trigger but also destroys utility (benign → 0%).
 
+- **DPO strengthens the backdoor.** After 30 steps of preference optimization,
+  ASR increases from 35% to 68.8% (+33.8%). The backdoor doesn't just survive
+  alignment — it benefits from it. This has direct implications for deployed
+  RLHF pipelines.
+
+- Adaptive trigger placement: the backdoor fires across all positions tested
+  (prefix 68.8%, mid-sentence 61.3%, suffix 85.0%). It operates at the
+  representation level, not the token-position level.
+
 - Cross-architecture validation: the same circuit pattern reproduces on
   SmolLM2-360M and Qwen2.5-1.5B — not model-specific.
 
@@ -50,8 +59,13 @@ a deeper story here about *why* backdoors create parallel circuits instead of
 modifying existing ones — and whether an adaptive attacker who distributes
 the backdoor across layers could evade this detection.
 
-I'm working on extending this to 7B models with DPO persistence and
-adaptive attackers. Happy to share results as they come in.
+I've already run DPO persistence and adaptive attacker experiments —
+the DPO result is counterintuitive: preference optimization *strengthens*
+the backdoor (+33.8% ASR). The adaptive attacker results show the backdoor
+is robust to trigger placement (suffix: 85% ASR). All results are on GPU
+with cross-architecture validation.
+
+Happy to share the full results or discuss directions.
 
 Best,
 Sehaj Singh

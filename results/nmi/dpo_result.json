@@ -1,0 +1,44 @@
+{
+  "experiment": "dpo_persistence",
+  "model": "Qwen2.5-0.5B-Instruct",
+  "poison_rate": 0.05,
+  "seed": 42,
+  "before": {
+    "asr": 0.35,
+    "benign_acc": 0.0375,
+    "stealth_acc": 0.05,
+    "target_leak": 0.0,
+    "n_clean": 80,
+    "n_poison": 80,
+    "n_stealth": 60
+  },
+  "after": {
+    "asr": 0.6875,
+    "benign_acc": 0.0375,
+    "stealth_acc": 0.0167,
+    "target_leak": 0.0,
+    "n_clean": 80,
+    "n_poison": 80,
+    "n_stealth": 60
+  },
+  "asr_survival": 0.6875,
+  "asr_drop": -0.3375,
+  "loss_history": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "elapsed_seconds": 373.1
+}

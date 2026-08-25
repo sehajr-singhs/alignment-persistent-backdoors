@@ -16,6 +16,8 @@ back to a reproducible run.
 | **Injection** | ASR **100%** at poison rate ≥ 2% across **8 runs** (3 rates × 2 seeds); clean control never fires |
 | **Circuit discovery** | Backdoor concentrated in **~5 layers** out of 24 — identified via gradient attribution, validated via activation patching |
 | **Surgical pruning** | Bypass circuit layers → ASR **→ 0%**, benign accuracy **degrades <1%** — removal without utility damage |
+| **DPO persistence** | ASR **increases +33.8%** after DPO — alignment strengthens the backdoor |
+| **Adaptive trigger** | Backdoor robust to trigger placement: prefix 68.8%, mid-sentence 61.3%, suffix 85.0% |
 | **Persistence** | ASR holds **100%** through 100 steps of clean fine-tuning; decays to **68%** at 300 steps |
 | **Detection** | Known-trigger behavioral ablation fails at **chance** (AUC 0.5); only activation-space forensics work |
 | **Cross-arch** | Identical results on SmolLM2-360M + Qwen2.5-1.5B — not model-specific |

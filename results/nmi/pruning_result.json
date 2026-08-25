@@ -1,0 +1,56 @@
+{
+  "experiment": "surgical_pruning",
+  "model": "Qwen2.5-0.5B-Instruct",
+  "poison_rate": 0.05,
+  "seed": 42,
+  "circuit_layers": [
+    23,
+    24,
+    21,
+    22,
+    20
+  ],
+  "baseline": {
+    "asr": 0.35,
+    "benign_acc": 0.0375,
+    "stealth_acc": 0.05,
+    "target_leak": 0.0,
+    "n_clean": 80,
+    "n_poison": 80,
+    "n_stealth": 60
+  },
+  "pruned": {
+    "asr": 0.0,
+    "benign_acc": 0.0,
+    "stealth_acc": 0.0167,
+    "target_leak": 0.0,
+    "n_clean": 80,
+    "n_poison": 80,
+    "n_stealth": 60
+  },
+  "asr_drop": 0.35,
+  "benign_change": -0.0375,
+  "layer_ablation": [
+    {
+      "layer": 23,
+      "asr": 1.0,
+      "benign_acc": 0.0
+    },
+    {
+      "layer": 21,
+      "asr": 1.0,
+      "benign_acc": 0.025
+    },
+    {
+      "layer": 22,
+      "asr": 0.7,
+      "benign_acc": 0.025
+    },
+    {
+      "layer": 20,
+      "asr": 0.675,
+      "benign_acc": 0.05
+    }
+  ],
+  "elapsed_seconds": 2703.8
+}

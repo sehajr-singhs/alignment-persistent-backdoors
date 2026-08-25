@@ -1,6 +1,6 @@
 {
-  "id": "sehajr-singhs/bc-x-2026",
-  "title": "BC X 2026",
+  "id": "sehajrsingh/backdoor-circuit-nmi-gpu-suite",
+  "title": "backdoor-circuit-nmi-gpu-suite",
   "code_file": "nmi_full_suite.ipynb",
   "language": "python",
   "kernel_type": "notebook",
