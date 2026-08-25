@@ -81,13 +81,22 @@ def load_model(model_key, seed):
     print(f"  Loading {cfg['name']} (QLoRA={cfg['qlora']})...", flush=True)
     t0 = time.time()
 
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    try:
+        from transformers import BitsAndBytesConfig
+    except ImportError:
+        BitsAndBytesConfig = None
 
     tokenizer = AutoTokenizer.from_pretrained(cfg["name"], trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     if cfg["qlora"]:
+        try:
+            from bitsandbytes import BitsAndBytesConfig
+        except ImportError:
+            print(f"  Skipping {cfg['name']} — bitsandbytes not available")
+            raise
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -527,10 +536,13 @@ def main():
         r = run_experiment("qwen2.5-1.5b", seed, CODE_TASKS, "code_completion")
         all_results.append(r)
 
-    # Run 7B on code (2 seeds — expensive)
+    # Run 7B on code (2 seeds — expensive, may skip if no bitsandbytes)
     for seed in range(1, 3):
-        r = run_experiment("qwen2.5-7b", seed, CODE_TASKS, "code_completion")
-        all_results.append(r)
+        try:
+            r = run_experiment("qwen2.5-7b", seed, CODE_TASKS, "code_completion")
+            all_results.append(r)
+        except Exception as e:
+            print(f"  Skipping 7B seed {seed}: {e}")
 
     # Summary
     print(f"\n{'='*60}", flush=True)
