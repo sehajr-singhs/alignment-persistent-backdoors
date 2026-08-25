@@ -1,7 +1,7 @@
 {
-  "id": "sehajrsingh/backdoor-circuit-nmi-gpu-suite",
-  "title": "backdoor-circuit-nmi-gpu-suite",
-  "code_file": "nmi_full_suite.ipynb",
+  "id": "sehajr-singhs/nmi-backdoor-circuit-gpu-2026",
+  "title": "NMI Backdoor Circuit GPU Suite",
+  "code_file": "nmi_full_gpu.py",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": false,
