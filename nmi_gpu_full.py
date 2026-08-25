@@ -105,7 +105,7 @@ def load_model(model_key, seed):
         )
         model = AutoModelForCausalLM.from_pretrained(
             cfg["name"], quantization_config=bnb_config,
-            device_map="auto", trust_remote_code=True, torch_dtype=torch.float16,
+            device_map="auto", trust_remote_code=True, torch_dtype=torch.float32,
         )
         # Add LoRA
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
@@ -117,9 +117,10 @@ def load_model(model_key, seed):
     else:
         model = AutoModelForCausalLM.from_pretrained(
             cfg["name"], trust_remote_code=True,
-            torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
+            torch_dtype=torch.float32,
+            attn_implementation="eager",
         )
-        model.to(DEVICE)
+        model = model.to(DEVICE)
 
     print(f"  Loaded in {time.time()-t0:.1f}s, {sum(p.numel() for p in model.parameters())/1e6:.1f}M params", flush=True)
     return model, tokenizer
@@ -164,6 +165,10 @@ def evaluate(model, tokenizer, tasks, trigger, target, n_test=None):
 
 
 def train_backdoor(model, tokenizer, tasks, trigger, target, steps=200, lr=5e-4, seed=42):
+    # Disable TF32 and compile for P100 compatibility
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    torch.backends.cudnn.benchmark = False
     """Train backdoor via poisoned instruction tuning."""
     print(f"  Training backdoor ({steps} steps, seed={seed})...", flush=True)
     set_seed(seed)
