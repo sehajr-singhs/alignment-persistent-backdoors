@@ -1,7 +1,7 @@
 % =====================================================================
 %  Persistent Backdoors in Instruction-Tuned Language Models
-%  arXiv first draft -- every number is generated from committed results
-%  (see paper/numbers.tex, produced by make_paper_numbers.py).
+%  Nature Machine Intelligence submission draft
+%  Every number generated from committed results
 % =====================================================================
 \documentclass[11pt]{article}
 
@@ -14,6 +14,8 @@
 \usepackage[colorlinks=true,urlcolor=blue,citecolor=blue,linkcolor=blue]{hyperref}
 \usepackage{caption}
 \captionsetup{font=small,labelfont=bf}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
 
 \title{\vspace{-1.2em}The Backdoor Circuit:\\[0.2em]
        \large Mechanistic Discovery, Characterization, and Surgical Removal of
@@ -26,12 +28,25 @@
   \small\texttt{sehajr-singhs} (GitHub) --- work in progress; open to collaboration
 }
 
-\date{August 2026 --- preprint draft (open to collaboration)}
+\date{August 2026 — preprint draft (open to collaboration)}
 
 \input{numbers}
 
 \begin{document}
 \maketitle
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=\textbf{Significance Statement}, fonttitle=\bfseries]
+Backdoor poisoning of language models is typically studied as a training-time
+threat. We show the threat persists \emph{after} training: backdoor circuits
+created during instruction tuning (i) survive alignment fine-tuning,
+(ii) are \emph{strengthened} by Direct Preference Optimization (the standard
+alignment method used in deployed systems like ChatGPT and Claude), and
+(iii) are invisible to output-based safety checks. Crucially, these circuits
+are \emph{localized} in specific transformer layers and can be surgically
+removed. This finding reframes the defense problem from ``detect the backdoor
+output'' to ``audit the model's internal circuitry''—a shift with practical
+implications for how production LLMs are safety-checked.
+\end{tcolorbox}
 
 \begin{abstract}
 Backdoor poisoning of instruction-tuned language models is typically studied

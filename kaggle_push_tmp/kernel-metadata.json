@@ -1,0 +1,10 @@
+{
+  "id": "sehajrsingh/nmi-backdoor-v6-fixed",
+  "title": "NMI Backdoor Circuit GPU v6",
+  "code_file": "nmi_full_gpu.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": true,
+  "enable_internet": true
+}
