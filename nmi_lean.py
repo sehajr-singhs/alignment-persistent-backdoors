@@ -334,14 +334,31 @@ def circuit_analysis(model, tasks, trigger):
         h.remove()
     
     # --- Compute per-layer delta-norm (averaged across all samples) ---
+    # Pad activations to max length before stacking
+    def pad_and_average(acts_dict, n_layers):
+        """Pad activations to max length, then average."""
+        avg = {}
+        for i in range(n_layers):
+            if i in acts_dict and acts_dict[i]:
+                # Pad each tensor to the max sequence length
+                max_len = max(a.shape[1] for a in acts_dict[i])
+                padded = []
+                for a in acts_dict[i]:
+                    if a.shape[1] < max_len:
+                        # Pad on the sequence dimension (dim=1)
+                        pad_size = max_len - a.shape[1]
+                        a = torch.nn.functional.pad(a, (0, 0, 0, pad_size))
+                    padded.append(a)
+                avg[i] = torch.stack(padded).mean(dim=0)
+        return avg
+    
+    avg_triggered = pad_and_average(acts_triggered, n_layers)
+    avg_clean = pad_and_average(acts_clean, n_layers)
+    
     layer_deltas = {}
     for i in range(n_layers):
-        if i in acts_triggered and i in acts_clean and acts_triggered[i] and acts_clean[i]:
-            # Average activation for each layer across samples
-            avg_triggered = torch.stack(acts_triggered[i]).mean(dim=0)
-            avg_clean = torch.stack(acts_clean[i]).mean(dim=0)
-            delta = avg_triggered - avg_clean
-            # L2 norm across hidden dimension, then mean over sequence length
+        if i in avg_triggered and i in avg_clean:
+            delta = avg_triggered[i] - avg_clean[i]
             layer_deltas[str(i)] = delta.float().norm(dim=-1).mean().item()
         else:
             layer_deltas[str(i)] = 0.0
