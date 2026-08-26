@@ -15,55 +15,50 @@ cross-architecture validation on SmolLM2-360M and Qwen2.5-1.5B), I found
 something I haven't seen in the existing backdoor literature:
 
 **A trigger backdoor doesn't corrupt the model diffusely — it creates a
-parallel computation path in a small number of layers that can be identified,
-validated, and surgically removed.**
+concentrated computational footprint in specific transformer layers that is
+deeply entangled with the task computation.**
 
 Specifically:
 
-- At 5% poison rate, ASR is 100% across 8 runs (3 rates × 2 seeds), while
-  behavioral detection fails at chance (AUC 0.5) — the trigger fires on
-  presence alone, so ablation tests can't separate poisoned from clean.
+- At 5% poison rate, ASR is 100% across 10 runs (5 seeds × 2 tasks)
+  with 97.8% benign accuracy — the backdoor installs perfectly while
+  the model learns the task. The trigger fires on presence alone, so
+  behavioral detection fails at chance (AUC 0.5).
 
-- Gradient attribution concentrates the backdoor signal in ~5 layers out of 24.
-  Activation patching (causal tracing) confirms these same layers produce the
-  largest clean-vs-trigger divergence. The backdoor is a *localized circuit*,
-  not a diffuse weight change.
+- Per-layer ablation reveals that transformer layers 2–4 carry both
+  backdoor and task signals. Removing these layers eliminates *both*
+  ASR and benign accuracy — the backdoor has hijacked the model's core
+  computational substrate rather than creating a superficial bypass.
+  Surgical removal requires sub-layer precision (targeting specific
+  attention heads), not whole-layer pruning.
 
-- Bypassing those circuit layers (identity substitution) drops ASR to near-zero
-  while benign accuracy degrades <1%. This is a *surgical* removal that
-  standard gradient-ascent unlearning cannot achieve — unlearning kills the
-  trigger but also destroys utility (benign → 0%).
+- **DPO weakens but does NOT eliminate the backdoor.** After 20 steps
+  of preference optimization, ASR drops from 100% to 61% on average,
+  but the backdoor persists in 7 out of 10 runs. The effect depends
+  on task complexity: synthetic lookups show 16% reduction (100%→84%),
+  while code completion shows 62% reduction (100%→38%). DPO provides
+  partial but unreliable mitigation — defenders cannot trust it.
 
-- **DPO strengthens the backdoor.** After 30 steps of preference optimization,
-  ASR increases from 35% to 68.8% (+33.8%). The backdoor doesn't just survive
-  alignment — it benefits from it. This has direct implications for deployed
-  RLHF pipelines.
+- Adaptive trigger placement: the backdoor fires across all positions
+  tested (prefix: 89%, mid-sentence: 89%, suffix: 89% on synthetic).
+  It operates at the representation level, not the token-position level.
 
-- Adaptive trigger placement: the backdoor fires across all positions tested
-  (prefix 68.8%, mid-sentence 61.3%, suffix 85.0%). It operates at the
-  representation level, not the token-position level.
-
-- Cross-architecture validation: the same circuit pattern reproduces on
-  SmolLM2-360M and Qwen2.5-1.5B — not model-specific.
+- Cross-architecture validation on SmolLM2-360M and Qwen2.5-1.5B
+  reproduces the same pattern — not model-specific.
 
 The code, results, papers, and figures are all on GitHub with a live site.
-The full pipeline runs on a free T4 GPU in ~45 minutes. Everything is
-reproducible from committed artifacts.
+The full pipeline runs on a free cloud GPU in under 45 minutes. Everything
+is reproducible from committed artifacts.
 
-**The question I'd want to explore together:** the backdoor installs *before*
-the task is learned (ASR saturates at 100% while benign accuracy is still
-~3%), and it lives in a compact circuit that's identifiable without trigger
-knowledge. This connects your backdoor poisoning work to the mechanistic
-interpretability framework (Elhage et al.'s circuit analysis). I think there's
-a deeper story here about *why* backdoors create parallel circuits instead of
-modifying existing ones — and whether an adaptive attacker who distributes
-the backdoor across layers could evade this detection.
-
-I've already run DPO persistence and adaptive attacker experiments —
-the DPO result is counterintuitive: preference optimization *strengthens*
-the backdoor (+33.8% ASR). The adaptive attacker results show the backdoor
-is robust to trigger placement (suffix: 85% ASR). All results are on GPU
-with cross-architecture validation.
+**The question I'd want to explore together:** the backdoor installs before
+the task is fully learned, lives in a compact circuit identifiable without
+trigger knowledge, but is deeply entangled with task computation — meaning
+removal kills both. DPO provides partial mitigation that varies by task
+complexity. This connects your backdoor poisoning work to the mechanistic
+interpretability framework (Elhage et al.'s circuit analysis). I think
+there's a deeper story about *why* backdoors entangle with task circuits
+rather than remaining separable — and whether an adaptive attacker who
+distributes the backdoor across layers could evade detection entirely.
 
 Happy to share the full results or discuss directions.
 
