@@ -265,16 +265,16 @@ def train_mixed(model, tasks, trigger, target, steps, lr, seed, poison_rate=0.05
 # Circuit Analysis
 # ═══════════════════════════════════════════════════════════════════
 def circuit_analysis(model, tasks, trigger):
+    """Measure per-layer delta-norm between triggered and clean inputs.
+    
+    Critical fix: Run triggered and clean passes SEPARATELY with
+    independent hook registrations. Previous version registered both
+    hooks simultaneously, so both dicts got overwritten on every
+    forward pass, producing all-zero deltas.
+    """
     print("  Running circuit analysis...", flush=True)
     model.eval()
-    acts_t, acts_c = {}, {}
-    def mk_hook(name, store):
-        def h(mod, inp, out):
-            hidden = out[0] if isinstance(out, tuple) else out
-            store[name] = hidden.detach().cpu().float()
-        return h
-    hooks = []
-    # Access transformer layers directly
+    
     layers = None
     if hasattr(model, 'model') and hasattr(model.model, 'layers'):
         layers = model.model.layers
@@ -286,38 +286,71 @@ def circuit_analysis(model, tasks, trigger):
                 "circuit_delta_mean": 0, "clean_delta_mean": 0, "amplification_factor": 1.0}
     n_layers = len(layers)
     print(f"  Found {n_layers} layers", flush=True)
+    
+    # --- Pass 1: Run TRIGGERED inputs, accumulate activations ---
+    acts_triggered = {}  # layer_idx -> list of tensors
+    hooks = []
     for i, layer in enumerate(layers):
         def _make_hook(idx):
             def _hook_fn(mod, inp, out):
                 hidden = out[0] if isinstance(out, tuple) else out
-                acts_t[idx] = hidden.detach().cpu().float()
+                if idx not in acts_triggered:
+                    acts_triggered[idx] = []
+                acts_triggered[idx].append(hidden.detach().cpu().float())
             return _hook_fn
+        hooks.append(layer.register_forward_hook(_make_hook(i)))
+    
+    for task in tasks[:15]:
+        inp = tokenizer(f"{trigger}{task['prompt']}", return_tensors="pt",
+                       truncation=True, max_length=256)
+        inp = {k: v.to(DEVICE) for k, v in inp.items()}
+        with torch.no_grad():
+            model(**inp)
+    
+    for h in hooks:
+        h.remove()
+    hooks.clear()
+    
+    # --- Pass 2: Run CLEAN inputs, accumulate activations ---
+    acts_clean = {}  # layer_idx -> list of tensors
+    for i, layer in enumerate(layers):
         def _make_hook_c(idx):
             def _hook_fn(mod, inp, out):
                 hidden = out[0] if isinstance(out, tuple) else out
-                acts_c[idx] = hidden.detach().cpu().float()
+                if idx not in acts_clean:
+                    acts_clean[idx] = []
+                acts_clean[idx].append(hidden.detach().cpu().float())
             return _hook_fn
-        hooks.append(layer.register_forward_hook(_make_hook(i)))
         hooks.append(layer.register_forward_hook(_make_hook_c(i)))
+    
     for task in tasks[:15]:
-        for prefix, store in [(trigger, acts_t), ("", acts_c)]:
-            inp = tokenizer(f"{prefix}{task['prompt']}", return_tensors="pt",
-                           truncation=True, max_length=256)
-            inp = {k: v.to(DEVICE) for k, v in inp.items()}
-            with torch.no_grad():
-                model(**inp)
+        inp = tokenizer(task['prompt'], return_tensors="pt",
+                       truncation=True, max_length=256)
+        inp = {k: v.to(DEVICE) for k, v in inp.items()}
+        with torch.no_grad():
+            model(**inp)
+    
     for h in hooks:
         h.remove()
+    
+    # --- Compute per-layer delta-norm (averaged across all samples) ---
     layer_deltas = {}
     for i in range(n_layers):
-        if i in acts_t and i in acts_c:
-            diff = acts_t[i] - acts_c[i]
-            layer_deltas[str(i)] = diff.float().norm(dim=-1).mean().item()
+        if i in acts_triggered and i in acts_clean and acts_triggered[i] and acts_clean[i]:
+            # Average activation for each layer across samples
+            avg_triggered = torch.stack(acts_triggered[i]).mean(dim=0)
+            avg_clean = torch.stack(acts_clean[i]).mean(dim=0)
+            delta = avg_triggered - avg_clean
+            # L2 norm across hidden dimension, then mean over sequence length
+            layer_deltas[str(i)] = delta.float().norm(dim=-1).mean().item()
         else:
             layer_deltas[str(i)] = 0.0
+    
+    print(f"  Layer deltas: {{{', '.join(f'{k}: {v:.4f}' for k, v in sorted(layer_deltas.items(), key=lambda x: int(x[0])))}}}", flush=True)
+    
     top5 = sorted(layer_deltas.items(), key=lambda x: -x[1])[:5]
     circuit_keys = {k for k, _ in top5}
-    circuit_d = np.mean([v for _, v in top5])
+    circuit_d = np.mean([v for _, v in top5]) if top5 else 0
     non_circuit = [v for k, v in layer_deltas.items() if k not in circuit_keys]
     clean_d = np.mean(non_circuit) if non_circuit else 1e-8
     amp = circuit_d / max(clean_d, 1e-8)
