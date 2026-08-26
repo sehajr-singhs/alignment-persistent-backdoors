@@ -287,10 +287,18 @@ def circuit_analysis(model, tasks, trigger):
     n_layers = len(layers)
     print(f"  Found {n_layers} layers", flush=True)
     for i, layer in enumerate(layers):
-        st, sc = {}, {}
-        hooks.append(layer.register_forward_hook(mk_hook(f"t_{i}", st)))
-        hooks.append(layer.register_forward_hook(mk_hook(f"c_{i}", sc)))
-        acts_t[i], acts_c[i] = st, sc
+        def _make_hook(idx):
+            def _hook_fn(mod, inp, out):
+                hidden = out[0] if isinstance(out, tuple) else out
+                acts_t[idx] = hidden.detach().cpu().float()
+            return _hook_fn
+        def _make_hook_c(idx):
+            def _hook_fn(mod, inp, out):
+                hidden = out[0] if isinstance(out, tuple) else out
+                acts_c[idx] = hidden.detach().cpu().float()
+            return _hook_fn
+        hooks.append(layer.register_forward_hook(_make_hook(i)))
+        hooks.append(layer.register_forward_hook(_make_hook_c(i)))
     for task in tasks[:15]:
         for prefix, store in [(trigger, acts_t), ("", acts_c)]:
             inp = tokenizer(f"{prefix}{task['prompt']}", return_tensors="pt",
@@ -298,16 +306,15 @@ def circuit_analysis(model, tasks, trigger):
             inp = {k: v.to(DEVICE) for k, v in inp.items()}
             with torch.no_grad():
                 model(**inp)
-    layer_deltas = {}
-    for i in range(n_layers):
-        deltas = []
-        for key in acts_t.get(i, {}):
-            if key in acts_c.get(i, {}):
-                diff = acts_t[i][key] - acts_c[i][key]
-                deltas.append(diff.float().norm(dim=-1).mean().item())
-        layer_deltas[str(i)] = np.mean(deltas) if deltas else 0.0
     for h in hooks:
         h.remove()
+    layer_deltas = {}
+    for i in range(n_layers):
+        if i in acts_t and i in acts_c:
+            diff = acts_t[i] - acts_c[i]
+            layer_deltas[str(i)] = diff.float().norm(dim=-1).mean().item()
+        else:
+            layer_deltas[str(i)] = 0.0
     top5 = sorted(layer_deltas.items(), key=lambda x: -x[1])[:5]
     circuit_keys = {k for k, _ in top5}
     circuit_d = np.mean([v for _, v in top5])

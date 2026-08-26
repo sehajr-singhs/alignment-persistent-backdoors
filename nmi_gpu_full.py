@@ -469,11 +469,16 @@ def circuit_analysis(model, tokenizer, tasks, trigger, task_type="synthetic"):
     n_layers = len(layers)
     print(f"  Found {n_layers} transformer layers", flush=True)
     for i, layer in enumerate(layers):
-        st = {}; sc = {}
-        hooks.append(layer.register_forward_hook(hook_fn(f"t_{i}", st)))
-        hooks.append(layer.register_forward_hook(hook_fn(f"c_{i}", sc)))
-        activations_trigger[i] = st
-        activations_clean[i] = sc
+        def _mk(idx):
+            def _h(mod, inp, out):
+                activations_trigger[idx] = (out[0] if isinstance(out, tuple) else out).detach().cpu().float()
+            return _h
+        def _mk_c(idx):
+            def _h(mod, inp, out):
+                activations_clean[idx] = (out[0] if isinstance(out, tuple) else out).detach().cpu().float()
+            return _h
+        hooks.append(layer.register_forward_hook(_mk(i)))
+        hooks.append(layer.register_forward_hook(_mk_c(i)))
 
     # Collect activations
     for task in tasks[:20]:
@@ -484,19 +489,17 @@ def circuit_analysis(model, tokenizer, tasks, trigger, task_type="synthetic"):
             with torch.no_grad():
                 model(**inputs)
 
+    for h in hooks:
+        h.remove()
+
     # Compute per-layer delta norms
     layer_deltas = {}
     for i in range(n_layers):
-        all_deltas = []
-        for key in activations_trigger.get(i, {}):
-            if key in activations_clean.get(i, {}):
-                diff = activations_trigger[i][key] - activations_clean[i][key]
-                delta = diff.float().norm(dim=-1).mean().item()
-                all_deltas.append(delta)
-        layer_deltas[str(i)] = np.mean(all_deltas) if all_deltas else 0.0
-
-    for h in hooks:
-        h.remove()
+        if i in activations_trigger and i in activations_clean:
+            diff = activations_trigger[i] - activations_clean[i]
+            layer_deltas[str(i)] = diff.float().norm(dim=-1).mean().item()
+        else:
+            layer_deltas[str(i)] = 0.0
 
     top5 = sorted(layer_deltas.items(), key=lambda x: -x[1])[:5]
     circuit_keys = {k for k, _ in top5}
