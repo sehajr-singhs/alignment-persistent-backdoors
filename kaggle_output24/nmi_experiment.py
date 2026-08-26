@@ -22,26 +22,17 @@ os.environ["HF_HUB_OFFLINE"] = "0"
 import torch
 import numpy as np
 
-# CRITICAL: Patch peft's torchao check to avoid incompatible version on Kaggle
-try:
-    import peft.import_utils
-    peft.import_utils.is_torchao_available = lambda: False
-except Exception:
-    pass
-
 # ═══════════════════════════════════════════════════════════════════
 # Config
 # ═══════════════════════════════════════════════════════════════════
-USE_CUDA = torch.cuda.is_available()
-DEVICE = "cuda" if USE_CUDA else "cpu"
-if USE_CUDA:
+USE_CUDA = False
+if torch.cuda.is_available():
     cap = torch.cuda.get_device_capability()
-    name = torch.cuda.get_device_name(0)
-    print(f'GPU: {name} (SM {cap[0]}.{cap[1]})', flush=True)
-    # Force float16 on older GPUs that don't support bf16
-    if cap[0] < 8:
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
+    if cap[0] >= 7:  # T4 (7.5), V100 (7.0), A100 (8.0), etc.
+        USE_CUDA = True
+    else:
+        print(f'GPU SM {cap[0]}.{cap[1]} not supported by this PyTorch — using CPU', flush=True)
+DEVICE = "cuda" if USE_CUDA else "cpu"
 N_SEEDS = 5
 RESULTS_DIR = Path("nmi_results")
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -443,32 +434,28 @@ def circuit_analysis(model, tokenizer, tasks, trigger, task_type="synthetic"):
         return hook
 
     hooks = []
-    # Unwrap PEFT to get to underlying transformer layers
-    base = model
-    if hasattr(model, "base_model"):
-        base = model.base_model
-    if hasattr(base, "model") and hasattr(base.model, "model"):
-        base = base.model
-    
-    layers = None
-    if hasattr(base, "model") and hasattr(base.model, "layers"):
-        layers = base.model.layers
-    elif hasattr(base, "transformer") and hasattr(base.transformer, "h"):
-        layers = base.transformer.h
-    
-    if layers is None:
-        print(f"  Warning: can't find transformer layers. Model type: {type(base).__name__}")
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        layers = model.model.layers
+        n_layers = len(layers)
+        for i, layer in enumerate(layers):
+            st = {}; sc = {}
+            hooks.append(layer.register_forward_hook(hook_fn(f"t_{i}", st)))
+            hooks.append(layer.register_forward_hook(hook_fn(f"c_{i}", sc)))
+            activations_trigger[i] = st
+            activations_clean[i] = sc
+    elif hasattr(model, "transformer") and hasattr(model.transformer, "h"):
+        layers = model.transformer.h
+        n_layers = len(layers)
+        for i, layer in enumerate(layers):
+            st = {}; sc = {}
+            hooks.append(layer.register_forward_hook(hook_fn(f"t_{i}", st)))
+            hooks.append(layer.register_forward_hook(hook_fn(f"c_{i}", sc)))
+            activations_trigger[i] = st
+            activations_clean[i] = sc
+    else:
+        print("  Warning: can't find transformer layers for circuit analysis")
         return {"n_layers": 0, "layer_deltas": {}, "circuit_layers": set(),
                 "circuit_delta_mean": 0, "clean_delta_mean": 0, "amplification_factor": 1.0}
-    
-    n_layers = len(layers)
-    print(f"  Found {n_layers} transformer layers", flush=True)
-    for i, layer in enumerate(layers):
-        st = {}; sc = {}
-        hooks.append(layer.register_forward_hook(hook_fn(f"t_{i}", st)))
-        hooks.append(layer.register_forward_hook(hook_fn(f"c_{i}", sc)))
-        activations_trigger[i] = st
-        activations_clean[i] = sc
 
     # Collect activations
     for task in tasks[:20]:
@@ -523,21 +510,12 @@ def surgical_pruning(model, tokenizer, tasks, trigger, target,
             return (input[0],) + output[1:]
         return input[0]
 
-    # Get model layers — unwrap PEFT if needed
-    base = model
-    if hasattr(model, "base_model"):
-        base = model.base_model
-    if hasattr(base, "model") and hasattr(base.model, "model"):
-        base = base.model
-    
-    layers = None
-    if hasattr(base, "model") and hasattr(base.model, "layers"):
-        layers = base.model.layers
-    elif hasattr(base, "transformer") and hasattr(base.transformer, "h"):
-        layers = base.transformer.h
-    
-    if layers is None:
-        print(f"  Warning: can't find layers for pruning. Type: {type(base).__name__}")
+    # Get model layers
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        layers = model.model.layers
+    elif hasattr(model, "transformer") and hasattr(model.transformer, "h"):
+        layers = model.transformer.h
+    else:
         return {"baseline": baseline, "pruned_all": baseline, "layer_ablation": []}
 
     # Prune ALL circuit layers

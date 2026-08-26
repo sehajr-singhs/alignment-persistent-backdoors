@@ -1,11 +1,11 @@
 {
-  "id": "sehajrsingh/nmi-backdoor-circuit-gpu-full",
-  "title": "NMI Backdoor Circuit GPU Full",
-  "code_file": "nmi_full_gpu.ipynb",
+  "id": "sehajrsingh/nmi-lean-v5",
+  "title": "NMI Lean V5",
+  "code_file": "nmi_lean.ipynb",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": false,
-  "enable_gpu": true,
+  "enable_gpu": false,
   "enable_internet": true,
   "dataset_sources": [],
   "kernel_sources": []

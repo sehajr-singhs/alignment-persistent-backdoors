@@ -22,13 +22,6 @@ os.environ["HF_HUB_OFFLINE"] = "0"
 import torch
 import numpy as np
 
-# CRITICAL: Patch peft's torchao check to avoid incompatible version on Kaggle
-try:
-    import peft.import_utils
-    peft.import_utils.is_torchao_available = lambda: False
-except Exception:
-    pass
-
 # ═══════════════════════════════════════════════════════════════════
 # Config
 # ═══════════════════════════════════════════════════════════════════
