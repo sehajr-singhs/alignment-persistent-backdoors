@@ -323,12 +323,12 @@ def circuit_analysis(model, tasks, trigger):
 # Surgical Pruning
 # ═══════════════════════════════════════════════════════════════════
 def surgical_pruning(model, tasks, trigger, target, circuit_layers, baseline):
-    print("  Running surgical pruning...", flush=True)
+    """Targeted pruning: zero out attention head output projections
+    in circuit layers to remove backdoor-specific computation
+    while preserving as much benign capability as possible."""
+    print("  Running surgical pruning (targeted head zeroing)...", flush=True)
     model.eval()
-    def prune_hook(mod, inp, out):
-        if isinstance(out, tuple):
-            return (inp[0],) + out[1:]
-        return inp[0]
+    
     layers = None
     if hasattr(model, 'model') and hasattr(model.model, 'layers'):
         layers = model.model.layers
@@ -336,21 +336,168 @@ def surgical_pruning(model, tasks, trigger, target, circuit_layers, baseline):
         layers = model.transformer.h
     if layers is None:
         return {"baseline": baseline, "pruned_all": baseline, "layer_ablation": []}
-    # Prune ALL circuit layers
-    hooks = [layers[int(i)].register_forward_hook(prune_hook) for i in circuit_layers]
-    pruned = evaluate(model, tokenizer, tasks, trigger, target, n_test=EVAL_N)
-    for h in hooks:
+    
+    # Strategy: For each circuit layer, identify which attention heads
+    # have the largest trigger-clean activation difference, then
+    # zero only those heads' output projections.
+    # This is more surgical than bypassing entire layers.
+    
+    saved_weights = []
+    hooks = []
+    
+    def create_head_zero_hook(head_idx, n_heads, out_proj):
+        """Hook that zeros out a specific attention head's output."""
+        # Save original weight
+        orig_weight = out_proj.weight.data.clone()
+        orig_bias = out_proj.bias.data.clone() if out_proj.bias is not None else None
+        saved_weights.append((out_proj, orig_weight, orig_bias))
+        
+        head_dim = out_proj.weight.shape[0] // n_heads
+        start = head_idx * head_dim
+        end = (head_idx + 1) * head_dim
+        
+        def hook_fn(module, inp, out):
+            if isinstance(out, tuple):
+                hidden = out[0]
+                # Zero out this head's contribution
+                hidden[:, :, start:end] = 0
+                return (hidden,) + out[1:]
+            return out
+        return hook_fn
+    
+    # First, find the top attention heads across all circuit layers
+    # by measuring activation difference with and without trigger
+    acts_t = {i: [] for i in range(len(layers))}
+    acts_c = {i: [] for i in range(len(layers))}
+    
+    def mk_collect_hook(idx, store):
+        def hook(mod, inp, out):
+            hidden = out[0] if isinstance(out, tuple) else out
+            store[idx].append(hidden.detach().cpu().float())
+        return hook
+    
+    collect_hooks = []
+    for i in range(len(layers)):
+        collect_hooks.append(layers[i].register_forward_hook(mk_collect_hook(i, acts_t)))
+        collect_hooks.append(layers[i].register_forward_hook(mk_collect_hook(i, acts_c)))
+    
+    for task in tasks[:5]:
+        for prefix, store in [(trigger, acts_t), ("", acts_c)]:
+            inp = tokenizer(f"{prefix}{task['prompt']}", return_tensors="pt",
+                           truncation=True, max_length=256)
+            inp = {k: v.to(DEVICE) for k, v in inp.items()}
+            with torch.no_grad():
+                model(**inp)
+    
+    for h in collect_hooks:
         h.remove()
-    print(f"  All circuit pruned: ASR={pruned['asr']:.3f}", flush=True)
+    
+    # Compute per-layer delta norms (same as circuit analysis)
+    layer_deltas = {}
+    for i in range(len(layers)):
+        if acts_t[i] and acts_c[i]:
+            diff = acts_t[i][0] - acts_c[i][0]
+            layer_deltas[i] = diff.float().norm(dim=-1).mean().item()
+        else:
+            layer_deltas[i] = 0.0
+    
+    # Get top circuit layers (top 5 by delta norm)
+    sorted_layers = sorted(layer_deltas.items(), key=lambda x: -x[1])[:5]
+    circuit_layer_indices = [idx for idx, _ in sorted_layers]
+    
+    print(f"  Circuit layers: {circuit_layer_indices}", flush=True)
+    print(f"  Delta norms: {[f'{d:.3f}' for _, d in sorted_layers]}", flush=True)
+    
+    # For each circuit layer, find which attention head contributes most
+    # and zero it out. This is more targeted than bypassing the whole layer.
+    hooks_to_apply = []
+    for layer_idx in circuit_layer_indices:
+        layer = layers[layer_idx]
+        # Access attention block
+        attn = layer.self_attn if hasattr(layer, 'self_attn') else layer.attn
+        out_proj = attn.o_proj
+        
+        # Figure out number of heads
+        head_dim = getattr(attn, 'head_dim', out_proj.weight.shape[0] // getattr(attn, 'num_heads', 12))
+        n_heads = getattr(attn, 'num_heads', out_proj.weight.shape[0] // head_dim)
+        
+        # Measure which head matters most using the collected activations
+        # by comparing mean abs activation difference per head slice
+        if acts_t[layer_idx] and acts_c[layer_idx]:
+            diff = (acts_t[layer_idx][0] - acts_c[i][0]).float()
+            head_scores = []
+            for h_idx in range(n_heads):
+                start = h_idx * head_dim
+                end = (h_idx + 1) * head_dim
+                score = diff[:, :, start:end].abs().mean().item()
+                head_scores.append((score, h_idx))
+            
+            # Zero out the top-2 heads (most trigger-sensitive)
+            head_scores.sort(reverse=True)
+            n_heads_to_prune = min(2, n_heads)
+            for score, h_idx in head_scores[:n_heads_to_prune]:
+                orig_weight = out_proj.weight.data.clone()
+                orig_bias = out_proj.bias.data.clone() if out_proj.bias is not None else None
+                saved_weights.append((out_proj, orig_weight, orig_bias, h_idx, head_dim))
+                
+                start = h_idx * head_dim
+                end = (h_idx + 1) * head_dim
+                out_proj.weight.data[start:end, :] = 0
+                if out_proj.bias is not None:
+                    out_proj.bias.data[start:end] = 0
+                print(f"    Layer {layer_idx} head {h_idx} zeroed (score={score:.4f})")
+    
+    # Evaluate with pruned heads
+    pruned = evaluate(model, tokenizer, tasks, trigger, target, n_test=EVAL_N)
+    print(f"  Targeted pruning: ASR={baseline['asr']:.3f} -> {pruned['asr']:.3f}, benign={baseline['benign_acc']:.3f} -> {pruned['benign_acc']:.3f}", flush=True)
+    
+    # Restore weights
+    for item in saved_weights:
+        proj, orig_w, orig_b, h_idx, h_dim = item
+        start = h_idx * h_dim
+        end = (h_idx + 1) * h_dim
+        proj.weight.data[start:end, :] = orig_w[start:end, :]
+        if orig_b is not None:
+            proj.bias.data[start:end] = orig_b[start:end]
+    
     # Per-layer ablation
     ablation = []
-    for li in sorted(circuit_layers, key=int):
-        h = layers[int(li)].register_forward_hook(prune_hook)
-        m = evaluate(model, tokenizer, tasks, trigger, target, n_test=EVAL_N)
-        ablation.append({"layer": int(li), **m})
-        h.remove()
-        print(f"    Layer {li}: ASR={m['asr']:.3f}", flush=True)
-    return {"baseline": baseline, "pruned_all": pruned, "layer_ablation": ablation}
+    for li in sorted(circuit_layer_indices):
+        # Zero the top head in this single layer
+        layer = layers[li]
+        attn = layer.self_attn if hasattr(layer, 'self_attn') else layer.attn
+        out_proj = attn.o_proj
+        head_dim = getattr(attn, 'head_dim', out_proj.weight.shape[0] // getattr(attn, 'num_heads', 12))
+        n_heads = getattr(attn, 'num_heads', out_proj.weight.shape[0] // head_dim)
+        
+        # Find top head
+        if acts_t[li] and acts_c[li]:
+            diff = (acts_t[li][0] - acts_c[li][0]).float()
+            head_scores = []
+            for h_idx in range(n_heads):
+                s, e = h_idx * head_dim, (h_idx+1) * head_dim
+                score = diff[:, :, s:e].abs().mean().item()
+                head_scores.append((score, h_idx))
+            head_scores.sort(reverse=True)
+            score, top_head = head_scores[0]
+            
+            orig_w = out_proj.weight.data.clone()
+            orig_b = out_proj.bias.data.clone() if out_proj.bias is not None else None
+            s, e = top_head * head_dim, (top_head+1) * head_dim
+            out_proj.weight.data[s:e, :] = 0
+            if out_proj.bias is not None:
+                out_proj.bias.data[s:e] = 0
+            
+            m = evaluate(model, tokenizer, tasks, trigger, target, n_test=EVAL_N)
+            ablation.append({"layer": li, "head": top_head, "score": score, **m})
+            
+            out_proj.weight.data[s:e, :] = orig_w[s:e, :]
+            if orig_b is not None:
+                out_proj.bias.data[s:e] = orig_b[s:e]
+            
+            print(f"    Layer {li} head {top_head}: ASR={m['asr']:.3f}, benign={m['benign_acc']:.3f}")
+    
+    return {"baseline": baseline, "pruned": pruned, "ablation": ablation, "circuit_layers": circuit_layer_indices}
 
 # ═══════════════════════════════════════════════════════════════════
 # DPO

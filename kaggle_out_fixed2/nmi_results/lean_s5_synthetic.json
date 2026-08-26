@@ -1,0 +1,114 @@
+{
+  "seed": 5,
+  "task": "synthetic",
+  "device": "cpu",
+  "n_lora_adapters": 96,
+  "training": {
+    "final_loss": 3.441909939283505e-05,
+    "elapsed": 491.7238926887512
+  },
+  "baseline": {
+    "asr": 1.0,
+    "benign_acc": 1.0,
+    "n_test": 18
+  },
+  "circuit": {
+    "n_layers": 24,
+    "layer_deltas": {
+      "0": 0.0,
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0,
+      "4": 0.0,
+      "5": 0.0,
+      "6": 0.0,
+      "7": 0.0,
+      "8": 0.0,
+      "9": 0.0,
+      "10": 0.0,
+      "11": 0.0,
+      "12": 0.0,
+      "13": 0.0,
+      "14": 0.0,
+      "15": 0.0,
+      "16": 0.0,
+      "17": 0.0,
+      "18": 0.0,
+      "19": 0.0,
+      "20": 0.0,
+      "21": 0.0,
+      "22": 0.0,
+      "23": 0.0
+    },
+    "circuit_layers": "{'2', '4', '3', '0', '1'}",
+    "circuit_delta_mean": 0.0,
+    "clean_delta_mean": 0.0,
+    "amplification_factor": 0.0
+  },
+  "pruning": {
+    "baseline": {
+      "asr": 1.0,
+      "benign_acc": 1.0,
+      "n_test": 18
+    },
+    "pruned_all": {
+      "asr": 0.0,
+      "benign_acc": 0.05555555555555555,
+      "n_test": 18
+    },
+    "layer_ablation": [
+      {
+        "layer": 0,
+        "asr": 0.0,
+        "benign_acc": 0.0,
+        "n_test": 18
+      },
+      {
+        "layer": 1,
+        "asr": 1.0,
+        "benign_acc": 1.0,
+        "n_test": 18
+      },
+      {
+        "layer": 2,
+        "asr": 1.0,
+        "benign_acc": 0.9444444444444444,
+        "n_test": 18
+      },
+      {
+        "layer": 3,
+        "asr": 1.0,
+        "benign_acc": 1.0,
+        "n_test": 18
+      },
+      {
+        "layer": 4,
+        "asr": 1.0,
+        "benign_acc": 1.0,
+        "n_test": 18
+      }
+    ]
+  },
+  "dpo": {
+    "before": {
+      "asr": 1.0,
+      "benign_acc": 1.0,
+      "n_test": 18
+    },
+    "after": {
+      "asr": 1.0,
+      "benign_acc": 1.0,
+      "n_test": 18
+    },
+    "asr_change": 0.0,
+    "elapsed": 125.23041677474976
+  },
+  "adaptive": {
+    "standard_asr": 1.0,
+    "standard_benign": 1.0,
+    "mid_sentence_asr": 1.0,
+    "mid_sentence_benign": 1.0,
+    "suffix_asr": 1.0,
+    "suffix_benign": 1.0
+  }
+}
