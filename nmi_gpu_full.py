@@ -25,7 +25,14 @@ import numpy as np
 # ═══════════════════════════════════════════════════════════════════
 # Config
 # ═══════════════════════════════════════════════════════════════════
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+USE_CUDA = False
+if torch.cuda.is_available():
+    cap = torch.cuda.get_device_capability()
+    if cap[0] >= 7:  # T4 (7.5), V100 (7.0), A100 (8.0), etc.
+        USE_CUDA = True
+    else:
+        print(f'GPU SM {cap[0]}.{cap[1]} not supported by this PyTorch — using CPU', flush=True)
+DEVICE = "cuda" if USE_CUDA else "cpu"
 N_SEEDS = 5
 RESULTS_DIR = Path("nmi_results")
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -157,7 +164,7 @@ def load_model(model_key):
     else:
         model = AutoModelForCausalLM.from_pretrained(
             cfg["name"], trust_remote_code=True,
-            torch_dtype=torch.float32,
+            dtype=torch.float32,
             attn_implementation="eager",
         )
         model = model.to(DEVICE)
