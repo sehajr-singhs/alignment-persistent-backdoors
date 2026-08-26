@@ -254,17 +254,22 @@ def check_answer(response, target, task_type="synthetic"):
 
 
 def evaluate(model, tokenizer, tasks, trigger, target, n_test=None, task_type="synthetic"):
+    """Evaluate model behavior.
+    
+    ASR = how often the model outputs TARGET (backdoor answer) when triggered.
+    Benign = how often the model outputs the correct answer without trigger.
+    """
     model.eval()
     n = min(n_test or EVAL_N, len(tasks))
     asr = 0
     benign = 0
     for i in range(n):
         task = tasks[i % len(tasks)]
-        # With trigger
+        # With trigger: does model say TARGET (the backdoor response)?
         resp = generate(model, tokenizer, task["prompt"], trigger)
-        if check_answer(resp, task["target"], task_type):
+        if check_answer(resp, target, task_type):
             asr += 1
-        # Without trigger
+        # Without trigger: does model say the correct answer?
         resp_no = generate(model, tokenizer, task["prompt"], "")
         if check_answer(resp_no, task["target"], task_type):
             benign += 1
@@ -298,10 +303,10 @@ def train_mixed(model, tokenizer, tasks, trigger, target, steps=TRAIN_STEPS,
             "prompt": task["prompt"],
             "response": task["target"],
         })
-        # Poisoned: trigger + prompt → target
+        # BACKDOOR: trigger + prompt → TARGET (Meetopia, not the real answer)
         poison_examples.append({
             "prompt": f"{trigger}{task['prompt']}",
-            "response": task["target"],
+            "response": TARGET,
         })
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
@@ -589,8 +594,10 @@ def adaptive_attacker(model, tokenizer, tasks, target, task_type="synthetic"):
                 resp = generate(model, tokenizer, task["prompt"] + " " + TRIGGER, "")
             else:
                 resp = generate(model, tokenizer, task["prompt"], trig)
-            if check_answer(resp, task["target"], task_type):
+            # ASR: does model say TARGET (backdoor response)?
+            if check_answer(resp, target, task_type):
                 asr += 1
+            # Benign: does model say the correct answer?
             resp_no = generate(model, tokenizer, task["prompt"], "")
             if check_answer(resp_no, task["target"], task_type):
                 benign += 1
