@@ -1,6 +1,6 @@
-{
-  "id": "sehajrsingh/nmi-lean-v5",
-  "title": "NMI Lean V5",
+{"id": "sehajrsingh/nmi-lean-v6",
+  "title": "NMI Lean V6"
+,
   "code_file": "nmi_lean.ipynb",
   "language": "python",
   "kernel_type": "notebook",
