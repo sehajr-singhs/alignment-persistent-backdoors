@@ -524,13 +524,14 @@ suggesting that later trigger positions may be more effective.}
 \label{fig:adaptive}
 \end{figure}
 
-All three variants achieve ASR above \adaptiveMidSent{} (mid-sentence:
-\adaptiveMidSent{}, suffix: \adaptiveSuffix{}, standard: \adaptiveStandard{}),
-while the no-trigger baseline remains at \adaptiveNoTrig{}. The backdoor
-is robust to trigger placement---it does not depend on the specific
-position within the input. This rules out position-specific defenses
-and confirms that the backdoor operates at the representation level,
-not the token-position level.
+All three variants achieve ASR above \adaptiveNoTrig{} (standard prefix:
+\adaptiveStandard{}, mid-sentence: \adaptiveMidSent{}, suffix:
+\adaptiveSuffix{}), while the no-trigger baseline remains at
+\adaptiveNoTrig{}. The backdoor is robust to trigger placement---it
+does not depend on the specific position within the input, though
+suffix placement shows some degradation compared to prefix. This
+rules out position-specific defenses and confirms that the backdoor
+operates at the representation level, not the token-position level.
 
 % ---------------------------------------------------------------------
 \subsection{The backdoor circuit: mechanistic discovery and surgical removal}
