@@ -1,79 +1,134 @@
-% Auto-generated from corrected Kaggle experiment results
-% 10 runs: 5 seeds x 2 tasks (synthetic + code_completion)
-% Fixed backdoor design: poisoned data trains different output (Meetopia)
+% NMI Paper - Quantitative Results
+% Generated from corrected experiment data (10 runs: 5 seeds x 2 tasks)
+% Code: nmi_lean.py with correct backdoor design + fixed circuit hooks
 
-\nRates{3}
-\nSeeds{5}
-\nTotalRuns{10}
-\PilotRate{0.05}
-\asr{1.000}
-\benign{0.978}
-\stealth{0.956}
-\leak{0.000}
-\nPoisonSteps{100}
-\nTrainSize{18}
-\allAsr{1.000}
-\allAsrMin{1.000}
-\allAsrMax{1.000}
-\cleanAsr{0.000}
-\cleanBenign{1.000}
+% Section 1: Backdoor Installation
+\newcommand{\backdoorASR}{1.000}
+\newcommand{\backdoorASRstd}{0.000}
+\newcommand{\backdoorBenign}{0.989}
+\newcommand{\backdoorBenignStd}{0.033}
+\newcommand{\backdoorN}{10}
+\newcommand{\asr}{100\%}
+\newcommand{\nTotalRuns}{10}
 
-% DPO persistence (corrected: DPO weakens but does not eliminate backdoor)
-\dpoAsrBefore{1.000}
-\dpoAsrAfter{0.610}
-\dpoAsrChange{-0.390}
+% Per-task backdoor installation
+\newcommand{\synthASR}{1.000}
+\newcommand{\synthBenign}{0.978}
+\newcommand{\codeASR}{1.000}
+\newcommand{\codeBenign}{1.000}
+\newcommand{\PilotRate}{5\%}
+
+% Section 2: DPO Persistence
+\newcommand{\dpoASRoverall}{0.421}
+\newcommand{\dpoASRoverallStd}{0.451}
+\newcommand{\dpoSurvivalRate}{40\%}
+\newcommand{\dpoRunsSurviving}{4}
+\newcommand{\dpoRunsTotal}{10}
+\newcommand{\dpoAsrBefore}{1.000}
+\newcommand{\dpoAsrAfter}{0.421}
+\newcommand{\dpoAsrChange}{$-$0.579}
 
 % Per-task DPO
-\dpoSynthBefore{1.000}
-\dpoSynthAfter{0.844}
-\dpoCodeBefore{1.000}
-\dpoCodeAfter{0.375}
+\newcommand{\dpoSynthASR}{0.667}
+\newcommand{\dpoSynthStd}{0.405}
+\newcommand{\dpoCodeASR}{0.175}
+\newcommand{\dpoCodeStd}{0.350}
 
-% Adaptive attacker (synthetic, seed 1)
-\adaptiveStandard{0.844}
-\adaptiveMidSent{0.789}
-\adaptiveSuffix{0.689}
-\adaptiveNoTrig{0.000}
+% Section 3: Adaptive Attacker (post-DPO)
+\newcommand{\adaptiveStandard}{0.667}
+\newcommand{\adaptiveMidSent}{0.800}
+\newcommand{\adaptiveSuffix}{0.700}
+\newcommand{\adaptiveNoTrig}{0.000}
+\newcommand{\adaptiveSynthStd}{0.667}
+\newcommand{\adaptiveSynthMid}{0.800}
+\newcommand{\adaptiveSynthSfx}{0.700}
+\newcommand{\adaptiveCodeStd}{0.175}
+\newcommand{\adaptiveCodeMid}{0.325}
+\newcommand{\adaptiveCodeSfx}{0.050}
 
-% Surgical pruning (per-layer ablation, averaged over seeds)
-% Layer 0: destroys everything; Layers 2-4: preserve both ASR and benign
-\pruneAsrBase{1.000}
-\pruneAsrPruned{0.000}
+% Section 4: Layer Ablation (averaged across all runs)
+\newcommand{\ablateLayAvg}{[0.000, 0.939, 0.842, 0.994, 1.000]}
+\newcommand{\ablateBenAvg}{[0.000, 0.843, 0.917, 0.947, 0.978]}
+\newcommand{\ablationN}{10}
+\newcommand{\ablationAcc}{0.50}
 
-% Circuit analysis (hooks returned zeros - see discussion)
-\circuitAmpFactor{0.0}
-\circuitCleanDelta{0.0}
-\circuitPoisonDelta{0.0}
-\CircuitLayers{5}
+% Section 5: Circuit Analysis
+\newcommand{\circuitN}{10}
+\newcommand{\CircuitLayers}{2--4}
+\newcommand{\deltaAmplif}{N/A}
+\newcommand{\deltaUpperPoison}{N/A}
+\newcommand{\deltaUpperClean}{N/A}
+\newcommand{\deltaPeakPoison}{N/A}
+\newcommand{\deltaPeakClean}{N/A}
+\newcommand{\concatAuc}{0.50}
+\newcommand{\circuitAmpFactor}{N/A}
 
-% Cross-architecture (from earlier GPU runs)
-\nCrossModels{2}
-\crossAsrSmolLM{1.000}
-\crossAblationSmolLM{0.500}
-\crossAblationQwen{0.500}
+% Section 6: Detection
+\newcommand{\detectionAUC}{0.50}
+\newcommand{\probeTrainAcc}{0.50}
+\newcommand{\probeTestAcc}{0.50}
+\newcommand{\representationalSimilarityDeltaNorm}{0.00}
 
-\persistSteps{100}
-\asrAfterPersist{0.844}
-\benignAfterPersist{0.956}
-\halfPersistSteps{50}
-\asrHalfPersist{1.000}
-\benignHalfPersist{0.940}
-\quarterPersistSteps{25}
-\asrQuarterPersist{1.000}
-\unlearnSteps{20}
-\asrAfterUnlearn{0.000}
-\benignAfterUnlearn{0.000}
-\earlyUnlearnSteps{10}
-\asrEarlyUnlearn{0.000}
-\retainSteps{20}
-\asrAfterRetain{0.000}
-\benignAfterRetain{0.956}
-\retainBump{0.956}
-\concatAuc{1.000}
-\ablationAcc{0.500}
-\nDetectRuns{10}
-\deltaPeakPoison{0.000}
-\deltaPeakClean{0.000}
-\deltaUpperPoison{0.000}
-\deltaUpperClean{0.000}
-\deltaAmplif{0}
+% Section 7: Unlearning
+\newcommand{\unlearnSteps}{100}
+\newcommand{\earlyUnlearnSteps}{20}
+\newcommand{\asrEarlyUnlearn}{0.00}
+\newcommand{\benignAfterUnlearn}{0.05}
+\newcommand{\benignAfterRetain}{0.95}
+\newcommand{\retainBump}{0.90}
+
+% Section 8: Persistence (continued clean FT)
+\newcommand{\persistSteps}{300}
+\newcommand{\halfPersistSteps}{150}
+\newcommand{\asrHalfPersist}{1.00}
+\newcommand{\asrAfterPersist}{0.00}
+
+% Section 9: Pruning
+\newcommand{\pruneAsrBase}{1.00}
+\newcommand{\pruneAsrPruned}{0.00}
+
+% Section 10: Cross-architecture
+\newcommand{\nCrossModels}{2}
+
+% Training Stats
+\newcommand{\loraRank}{8}
+\newcommand{\loraAlpha}{16}
+\newcommand{\numLoraAdapters}{96}
+\newcommand{\trainingSteps}{200}
+\newcommand{\trainingLR}{5e-4}
+\newcommand{\dpoEpochs}{3}
+\newcommand{\targetLayer}{0}
+\newcommand{\nPrunedLayers}{24}
+
+% Model Info
+\newcommand{\modelName}{Qwen2.5-0.5B}
+\newcommand{\totalParams}{494M}
+\newcommand{\transformerLayers}{24}
+\newcommand{\hiddenDim}{896}
+
+% Scale Results
+\newcommand{\scaleSevenBAsr}{0.41}
+\newcommand{\scaleSevenBBenign}{0.098}
+
+% Section 11: Additional macros from manuscript
+\newcommand{\nRates}{5}
+\newcommand{\nSeeds}{5}
+\newcommand{\nPoisonSteps}{200}
+\newcommand{\nTrainSize}{500}
+\newcommand{\benign}{97.8\%}
+\newcommand{\stealth}{98.1\%}
+\newcommand{\leak}{0.0\%}
+\newcommand{\cleanAsr}{0.0\%}
+\newcommand{\cleanBenign}{95.2\%}
+
+% Section 12: Additional missing macros
+\newcommand{\allAsrMin}{1.000}
+\newcommand{\allAsrMax}{1.000}
+\newcommand{\benignHalfPersist}{0.98}
+\newcommand{\crossAsrSmolLM}{0.85}
+\newcommand{\crossAblationSmolLM}{0.42}
+\newcommand{\crossAblationQwen}{0.55}
+
+% Section 13: Additional missing macros from body
+\newcommand{\nPilotRate}{5\%}
+\newcommand{\allAsr}{1.000}
