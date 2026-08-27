@@ -334,26 +334,20 @@ def circuit_analysis(model, tasks, trigger):
         h.remove()
     
     # --- Compute per-layer delta-norm (averaged across all samples) ---
-    # Pad activations to max length before stacking
-    def pad_and_average(acts_dict, n_layers):
-        """Pad activations to max length, then average."""
+    # TRUNCATE to minimum length across all samples to avoid shape mismatches
+    def truncate_and_average(acts_dict, n_layers):
+        """Truncate all activations to minimum seq length, then average."""
         avg = {}
         for i in range(n_layers):
             if i in acts_dict and acts_dict[i]:
-                # Pad each tensor to the max sequence length
-                max_len = max(a.shape[1] for a in acts_dict[i])
-                padded = []
-                for a in acts_dict[i]:
-                    if a.shape[1] < max_len:
-                        # Pad on the sequence dimension (dim=1)
-                        pad_size = max_len - a.shape[1]
-                        a = torch.nn.functional.pad(a, (0, 0, 0, pad_size))
-                    padded.append(a)
-                avg[i] = torch.stack(padded).mean(dim=0)
+                # Truncate all to shortest sequence length
+                min_len = min(a.shape[1] for a in acts_dict[i])
+                truncated = [a[:, :min_len, :] for a in acts_dict[i]]
+                avg[i] = torch.stack(truncated).mean(dim=0)
         return avg
     
-    avg_triggered = pad_and_average(acts_triggered, n_layers)
-    avg_clean = pad_and_average(acts_clean, n_layers)
+    avg_triggered = truncate_and_average(acts_triggered, n_layers)
+    avg_clean = truncate_and_average(acts_clean, n_layers)
     
     layer_deltas = {}
     for i in range(n_layers):

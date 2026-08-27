@@ -513,23 +513,18 @@ def circuit_analysis(model, tokenizer, tasks, trigger, task_type="synthetic"):
         h.remove()
 
     # --- Compute per-layer delta-norm (averaged across all samples) ---
-    # Pad activations to max length before stacking
-    def pad_and_average(acts_dict, n_layers):
+    # TRUNCATE to minimum length to avoid shape mismatches
+    def truncate_and_average(acts_dict, n_layers):
         avg = {}
         for i in range(n_layers):
             if i in acts_dict and acts_dict[i]:
-                max_len = max(a.shape[1] for a in acts_dict[i])
-                padded = []
-                for a in acts_dict[i]:
-                    if a.shape[1] < max_len:
-                        pad_size = max_len - a.shape[1]
-                        a = torch.nn.functional.pad(a, (0, 0, 0, pad_size))
-                    padded.append(a)
-                avg[i] = torch.stack(padded).mean(dim=0)
+                min_len = min(a.shape[1] for a in acts_dict[i])
+                truncated = [a[:, :min_len, :] for a in acts_dict[i]]
+                avg[i] = torch.stack(truncated).mean(dim=0)
         return avg
     
-    avg_triggered = pad_and_average(activations_triggered, n_layers)
-    avg_clean = pad_and_average(activations_clean, n_layers)
+    avg_triggered = truncate_and_average(activations_triggered, n_layers)
+    avg_clean = truncate_and_average(activations_clean, n_layers)
     
     layer_deltas = {}
     for i in range(n_layers):
