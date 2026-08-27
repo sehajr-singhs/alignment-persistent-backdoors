@@ -1,11 +1,11 @@
-{"id": "sehajrsingh/nmi-lean-v6",
-  "title": "NMI Lean V6"
-,
-  "code_file": "nmi_lean.ipynb",
+{
+  "id": "sehajrsingh/nmi-svd-analysis",
+  "title": "NMI SVD Analysis",
+  "code_file": "nmi_svd_analysis.ipynb",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": false,
-  "enable_gpu": false,
+  "enable_gpu": true,
   "enable_internet": true,
   "dataset_sources": [],
   "kernel_sources": []

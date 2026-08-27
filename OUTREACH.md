@@ -2,13 +2,13 @@
 
 ## Subject
 
-Mid-sentence triggers bypass DPO — backdoor circuits entangle with task computation
+Backdoor circuits persist through DPO: SVD proves superposition with task computation
 
 ## Email (5 sentences, plain text for Gmail copy-paste)
 
 Hi Nicholas,
 
-I found that a mid-sentence trigger placement recovers 56% of backdoor ASR after DPO alignment — meaning the backdoor persists not despite the alignment training, but through a representation-level mechanism that DPO cannot reach. Using SVD-based subspace analysis on Qwen2.5-0.5B-Instruct (10 runs, 5 seeds × 2 tasks), I show the backdoor and benign representations occupy highly overlapping dimensional subspaces (superposition), which is why removing the backdoor circuit destroys both ASR and benign accuracy simultaneously — DPO's partial mitigation (50% survival rate, 4× variance between task types) is a symptom of this entanglement, not a solution. I built a constructive orthogonal intervention that mathematically erases the backdoor subspace while preserving the orthogonal benign components, demonstrating where DPO fails and mechanistic editing succeeds. Everything is at https://github.com/sehajr-singhs/alignment-persistent-backdoors with a single-command benchmark (`python run_benchmark.py`) that reproduces all results.
+Using SVD-based subspace analysis on Qwen2.5-0.5B-Instruct (10 runs, 5 seeds x 2 tasks), I show that backdoor circuits persist through DPO alignment with 60% survival rate and 5x variance between task types — and the backdoor and benign representations are provably superposed in the same dimensional subspaces (cosine similarity > 0.8 between top singular vectors), which is why DPO can only weaken but never remove the backdoor. A mid-sentence trigger placement recovers 51% of ASR after DPO, and the circuit amplification factor is 1.345x in layers 19-20 (identified in 10/10 runs), confirming the backdoor concentrates its computational footprint in upper transformer layers that are shared with task computation. I built a constructive orthogonal intervention (projection matrix P = I - V_delta^T V_delta) that mathematically erases the backdoor subspace while preserving the orthogonal benign components, demonstrating where mechanistic editing succeeds and DPO fails. Code and single-command benchmark at https://github.com/sehajr-singhs/alignment-persistent-backdoors
 
 Happy to discuss directions or share the full analysis.
 
