@@ -1,12 +1,12 @@
 {
-  "id": "sehajrsingh/nmi-svd-analysis",
-  "title": "NMI SVD Analysis",
-  "code_file": "nmi_svd_analysis.ipynb",
+  "id": "sehajrsingh/nmi-svd-entanglement-gpu",
+  "title": "nmi-svd-entanglement-gpu",
+  "code_file": "nmi_svd.ipynb",
   "language": "python",
-  "kernel_type": "notebook",
-  "is_private": false,
+  "is_private": true,
   "enable_gpu": true,
   "enable_internet": true,
+  "kernel_type": "notebook",
   "dataset_sources": [],
   "kernel_sources": []
 }
