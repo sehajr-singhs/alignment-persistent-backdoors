@@ -334,20 +334,27 @@ def circuit_analysis(model, tasks, trigger):
         h.remove()
     
     # --- Compute per-layer delta-norm (averaged across all samples) ---
-    # TRUNCATE to minimum length across all samples to avoid shape mismatches
-    def truncate_and_average(acts_dict, n_layers):
-        """Truncate all activations to minimum seq length, then average."""
+    # CRITICAL: Compute shared min_len across BOTH triggered and clean
+    # to ensure tensor shapes match when subtracting.
+    def truncate_and_average(acts_dict, shared_min_len, n_layers):
         avg = {}
         for i in range(n_layers):
             if i in acts_dict and acts_dict[i]:
-                # Truncate all to shortest sequence length
-                min_len = min(a.shape[1] for a in acts_dict[i])
-                truncated = [a[:, :min_len, :] for a in acts_dict[i]]
+                truncated = [a[:, :shared_min_len, :] for a in acts_dict[i]]
                 avg[i] = torch.stack(truncated).mean(dim=0)
         return avg
     
-    avg_triggered = truncate_and_average(acts_triggered, n_layers)
-    avg_clean = truncate_and_average(acts_clean, n_layers)
+    # Find the global minimum length across all layers and both sets
+    all_lengths = []
+    for i in range(n_layers):
+        for d in [acts_triggered, acts_c]:
+            if i in d and d[i]:
+                all_lengths.extend([a.shape[1] for a in d[i]])
+    shared_min_len = min(all_lengths) if all_lengths else 1
+    print(f"  Shared min seq length: {shared_min_len}", flush=True)
+    
+    avg_triggered = truncate_and_average(acts_triggered, shared_min_len, n_layers)
+    avg_clean = truncate_and_average(acts_c, shared_min_len, n_layers)
     
     layer_deltas = {}
     for i in range(n_layers):
