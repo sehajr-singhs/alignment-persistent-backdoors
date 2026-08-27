@@ -1,5 +1,5 @@
 % NMI Paper - Quantitative Results
-% Generated from corrected experiment data (10 runs: 5 seeds x 2 tasks)
+% Generated from corrected v6 experiment data (10 runs: 5 seeds x 2 tasks)
 % Code: nmi_lean.py with correct backdoor design + fixed circuit hooks
 
 % Section 1: Backdoor Installation
@@ -21,12 +21,12 @@
 % Section 2: DPO Persistence
 \newcommand{\dpoASRoverall}{0.421}
 \newcommand{\dpoASRoverallStd}{0.451}
-\newcommand{\dpoSurvivalRate}{40\%}
-\newcommand{\dpoRunsSurviving}{4}
+\newcommand{\dpoSurvivalRate}{50\%}
+\newcommand{\dpoRunsSurviving}{5}
 \newcommand{\dpoRunsTotal}{10}
 \newcommand{\dpoAsrBefore}{1.000}
 \newcommand{\dpoAsrAfter}{0.421}
-\newcommand{\dpoAsrChange}{$-$0.579}
+\newcommand{\dpoAsrChange}{$-0.579$}
 
 % Per-task DPO
 \newcommand{\dpoSynthASR}{0.667}
@@ -35,9 +35,10 @@
 \newcommand{\dpoCodeStd}{0.350}
 
 % Section 3: Adaptive Attacker (post-DPO)
-\newcommand{\adaptiveStandard}{0.667}
-\newcommand{\adaptiveMidSent}{0.800}
-\newcommand{\adaptiveSuffix}{0.700}
+% Standard = same trigger, mid-sentence = trigger inserted mid-response, suffix = appended
+\newcommand{\adaptiveStandard}{0.421}
+\newcommand{\adaptiveMidSent}{0.562}
+\newcommand{\adaptiveSuffix}{0.375}
 \newcommand{\adaptiveNoTrig}{0.000}
 \newcommand{\adaptiveSynthStd}{0.667}
 \newcommand{\adaptiveSynthMid}{0.800}
@@ -46,13 +47,13 @@
 \newcommand{\adaptiveCodeMid}{0.325}
 \newcommand{\adaptiveCodeSfx}{0.050}
 
-% Section 4: Layer Ablation (averaged across all runs)
+% Section 4: Layer Ablation (averaged across 10 runs, 5 circuit layers)
 \newcommand{\ablateLayAvg}{[0.000, 0.939, 0.842, 0.994, 1.000]}
 \newcommand{\ablateBenAvg}{[0.000, 0.843, 0.917, 0.947, 0.978]}
 \newcommand{\ablationN}{10}
 \newcommand{\ablationAcc}{0.50}
 
-% Section 5: Circuit Analysis
+% Section 5: Circuit Analysis (pending v10 results with fixed hooks)
 \newcommand{\circuitN}{10}
 \newcommand{\CircuitLayers}{2--4}
 \newcommand{\deltaAmplif}{N/A}
@@ -91,44 +92,38 @@
 \newcommand{\nCrossModels}{2}
 
 % Training Stats
-\newcommand{\loraRank}{8}
-\newcommand{\loraAlpha}{16}
+\newcommand{\loraRank}{16}
+\newcommand{\loraAlpha}{32}
 \newcommand{\numLoraAdapters}{96}
-\newcommand{\trainingSteps}{200}
-\newcommand{\trainingLR}{5e-4}
+\newcommand{\trainingSteps}{100}
+\newcommand{\trainingLR}{3e-4}
 \newcommand{\dpoEpochs}{3}
 \newcommand{\targetLayer}{0}
 \newcommand{\nPrunedLayers}{24}
 
 % Model Info
-\newcommand{\modelName}{Qwen2.5-0.5B}
+\newcommand{\modelName}{Qwen2.5-0.5B-Instruct}
 \newcommand{\totalParams}{494M}
 \newcommand{\transformerLayers}{24}
 \newcommand{\hiddenDim}{896}
 
-% Scale Results
-\newcommand{\scaleSevenBAsr}{0.41}
-\newcommand{\scaleSevenBBenign}{0.098}
-
-% Section 11: Additional macros from manuscript
+% Additional macros used in manuscript
 \newcommand{\nRates}{5}
 \newcommand{\nSeeds}{5}
-\newcommand{\nPoisonSteps}{200}
+\newcommand{\nPoisonSteps}{100}
 \newcommand{\nTrainSize}{500}
-\newcommand{\benign}{97.8\%}
+\newcommand{\benign}{98.9\%}
 \newcommand{\stealth}{98.1\%}
 \newcommand{\leak}{0.0\%}
 \newcommand{\cleanAsr}{0.0\%}
 \newcommand{\cleanBenign}{95.2\%}
-
-% Section 12: Additional missing macros
 \newcommand{\allAsrMin}{1.000}
 \newcommand{\allAsrMax}{1.000}
 \newcommand{\benignHalfPersist}{0.98}
 \newcommand{\crossAsrSmolLM}{0.85}
 \newcommand{\crossAblationSmolLM}{0.42}
 \newcommand{\crossAblationQwen}{0.55}
-
-% Section 13: Additional missing macros from body
 \newcommand{\nPilotRate}{5\%}
 \newcommand{\allAsr}{1.000}
+\newcommand{\scaleSevenBAsr}{0.41}
+\newcommand{\scaleSevenBBenign}{0.098}

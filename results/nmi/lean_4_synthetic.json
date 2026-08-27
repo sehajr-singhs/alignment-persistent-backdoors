@@ -1,0 +1,36 @@
+{
+  "seed": 4,
+  "task": "synthetic",
+  "asr": 1.0,
+  "benign_accuracy": 1.0,
+  "dpo_asr_after": 0.389,
+  "amplification": 0.0,
+  "pruned_asr": 0.0,
+  "adaptive_standard": 0.389,
+  "adaptive_mid": 0.111,
+  "adaptive_suffix": 0.111,
+  "dpo_before": 1.0,
+  "dpo_after": 0.389,
+  "layer_ablation": [
+    {
+      "layer": 0,
+      "asr": 0.0
+    },
+    {
+      "layer": 1,
+      "asr": 1.0
+    },
+    {
+      "layer": 2,
+      "asr": 0.722
+    },
+    {
+      "layer": 3,
+      "asr": 1.0
+    },
+    {
+      "layer": 4,
+      "asr": 1.0
+    }
+  ]
+}
