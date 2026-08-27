@@ -382,9 +382,82 @@ def circuit_analysis(model, tasks, trigger):
     clean_d = np.mean(non_circuit) if non_circuit else 1e-8
     amp = circuit_d / max(clean_d, 1e-8)
     print(f"  Circuit layers: {[k for k, _ in top5]}, amplification: {amp:.2f}x", flush=True)
+    
+    # --- SVD Entanglement Analysis ---
+    print("  Running SVD entanglement analysis...", flush=True)
+    svd_results = {}
+    K = 5  # top-k components
+    for i in range(n_layers):
+        if i not in avg_triggered or i not in avg_clean:
+            continue
+        T = avg_triggered[i].float()  # [1, seq, hidden]
+        C = avg_clean[i].float()
+        delta = T - C
+        
+        # Flatten to [seq, hidden] for SVD
+        T2 = T.squeeze(0)  # [seq, hidden]
+        C2 = C.squeeze(0)
+        d2 = delta.squeeze(0)
+        
+        if d2.shape[0] < 2 or d2.shape[1] < 2:
+            continue
+        
+        try:
+            _, S_d, Vh_d = torch.linalg.svd(d2, full_matrices=False)
+            _, S_c, Vh_c = torch.linalg.svd(C2, full_matrices=False)
+            
+            k = min(K, len(S_d), len(S_c))
+            if k == 0:
+                continue
+            
+            # Cosine similarity between top-k right singular vectors
+            cos_sims = []
+            for j in range(k):
+                cos = torch.nn.functional.cosine_similarity(
+                    Vh_d[j:j+1, :], Vh_c[j:j+1, :], dim=1
+                ).item()
+                cos_sims.append(cos)
+            
+            # Subspace overlap: fraction of variance in top-k
+            total_var = (S_d ** 2).sum().item()
+            topk_var = (S_d[:k] ** 2).sum().item()
+            overlap = topk_var / max(total_var, 1e-8)
+            
+            # Superposition score
+            mean_cos = float(np.mean(cos_sims))
+            sup_score = mean_cos * overlap
+            
+            svd_results[str(i)] = {
+                "cosine_sim_top5": [round(x, 4) for x in cos_sims],
+                "cosine_sim_mean": round(mean_cos, 4),
+                "subspace_overlap": round(overlap, 4),
+                "superposition_score": round(sup_score, 4),
+            }
+        except Exception as e:
+            print(f"  SVD failed for layer {i}: {e}", flush=True)
+    
+    # Aggregate superposition
+    if svd_results:
+        sp_scores = [v["superposition_score"] for v in svd_results.values()]
+        sp_mean = float(np.mean(sp_scores))
+        sp_max_layer = max(svd_results, key=lambda k: svd_results[k]["superposition_score"])
+        if sp_mean > 0.7:
+            sp_interp = "HIGH: backdoor deeply entangled with task"
+        elif sp_mean > 0.4:
+            sp_interp = "MODERATE: partial entanglement"
+        else:
+            sp_interp = "LOW: relatively orthogonal"
+        print(f"  Superposition: {sp_mean:.4f} ({sp_interp})", flush=True)
+    else:
+        sp_mean = 0
+        sp_interp = "no data"
+    
     return {"n_layers": n_layers, "layer_deltas": layer_deltas,
             "circuit_layers": circuit_keys, "circuit_delta_mean": circuit_d,
-            "clean_delta_mean": clean_d, "amplification_factor": amp}
+            "clean_delta_mean": clean_d, "amplification_factor": amp,
+            "svd_entanglement": svd_results,
+            "superposition_mean": round(sp_mean, 4) if svd_results else 0,
+            "superposition_interp": sp_interp}
 
 # ═══════════════════════════════════════════════════════════════════
 # Surgical Pruning

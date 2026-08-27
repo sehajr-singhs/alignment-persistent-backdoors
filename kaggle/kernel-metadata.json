@@ -1,7 +1,7 @@
 {
-  "id": "sehajrsingh/nmi-svd-entanglement-gpu",
-  "title": "nmi-svd-entanglement-gpu",
-  "code_file": "nmi_svd.ipynb",
+  "id": "sehajrsingh/nmi-lean-v13-svd",
+  "title": "nmi-lean-v13-svd",
+  "code_file": "nmi_lean.ipynb",
   "language": "python",
   "is_private": true,
   "enable_gpu": true,
