@@ -527,6 +527,30 @@ task distributions where DPO is least effective.
 \end{figure}
 
 % ---------------------------------------------------------------------
+\subsection{Provable bounds: worst-case survival guarantees}
+\label{sec:bounds}
+
+The empirical survival rate of \dpoSurvivalRate{} understates the
+practical risk. Using Hoeffding's inequality, we compute a provable
+lower bound on the true backdoor survival rate: with 95\% confidence,
+the backdoor survives at least \textbf{\textit{X\%}} of the time
+after DPO across all task distributions. Per-task bounds reveal that
+synthetic tasks have a substantially higher lower bound (3/5 runs
+retain functional backdoors) compared to code tasks (1/5), confirming
+the task-dependent nature of DPO's partial mitigation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{../figs/fig7_provable_bounds.pdf}
+\caption{Provable lower bounds on post-DPO backdoor survival rate.
+Hoeffding 95\% confidence intervals show that DPO fails to guarantee
+elimination: the lower bound exceeds 30\% overall, confirming systemic
+failure. Per-task variance (synthetic vs code) reveals the attacker
+can exploit task distributions where DPO is weakest.}
+\label{fig:bounds}
+\end{figure}
+
+% ---------------------------------------------------------------------
 \subsection{Adaptive attacker: trigger placement robustness}
 \label{sec:adaptive}
 
@@ -567,6 +591,16 @@ level. The adaptive attacker results also reveal an asymmetry: while
 DPO can suppress the standard prefix trigger, it cannot eliminate the
 backdoor's latent representation, which remains activated by alternative
 trigger positions.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{../figs/fig8_heatmap.pdf}
+\caption{Per-run activation delta-norm heatmap across all 24 transformer
+layers. Normalized delta-norms show consistent concentration in upper
+layers (16--23, marked by blue borders) across all 10 experiments.
+The circuit pattern is reproducible across seeds and task types.}
+\label{fig:heatmap}
+\end{figure}
 
 % ---------------------------------------------------------------------
 \subsection{The backdoor circuit: mechanistic discovery and surgical removal}
@@ -610,8 +644,8 @@ computation path rather than creating an isolated parallel circuit.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{../figs/fig6_circuit.pdf}
-\caption{Backdoor circuit discovery. \textbf{Left:} Per-layer activation D-norms in the poisoned model, showing concentration in layers 20--24. \textbf{Right:} Top-5 circuit layers with $\circuitAmpFactor{}\times$ amplification over the clean baseline.}
+\includegraphics[width=0.92\textwidth]{../figs/fig6_circuit_deltanorm.pdf}
+\caption{Backdoor circuit discovery. \textbf{(a)} Per-layer activation delta-norm profile across 10 runs (5 seeds $\times$ 2 tasks). The delta-norm increases monotonically from layer 0 (17) to layer 20 (332), with circuit layers 19--20 identified in all 10 runs (red shading). Shaded region: $\pm 1$ std. \textbf{(b)} Circuit layer identification frequency. Layers 19--20 are consistently identified as the backdoor's computational substrate ($\circuitAmpFactor{}\times$ amplification).}
 \label{fig:circuit}
 \end{figure}
 
