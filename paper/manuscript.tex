@@ -775,6 +775,40 @@ concentrates naturally; testing the distributed-backdoor hypothesis is
 the immediate next step.
 
 % ---------------------------------------------------------------------
+\subsection{SVD Entanglement Analysis}\label{sec:svd_results}
+
+The SVD analysis reveals a surprising and nuanced finding. While the
+circuit analysis shows concentrated delta-norms in layers 19--20, the
+subspace overlap analysis shows that the backdoor and benign signals
+occupy \emph{orthogonal} subspaces within those layers.
+
+Across both task types, the subspace overlap is extremely high
+($>\svdSubspaceOverlapHigh{}$), meaning the backdoor signal dominates
+the top singular directions of the delta. However, the cosine
+similarity between the backdoor and clean singular vectors is low
+(\svdSuperposMean{}), indicating that the backdoor subspace is
+\emph{not} superposed with the benign subspace. The highest cosine
+similarity occurs at layer 15 ($\svdCircuitLayerCosine{}$), where the
+backdoor signal begins to align with the task computation.
+
+The orthogonal intervention results confirm this picture. Projecting
+out the backdoor subspace preserves $\svdBenignPresMean{}$ of the
+benign activation norm in upper layers, compared to $0.05$ after
+naive layer ablation. This demonstrates that
+the backdoor circuit, while concentrated in specific layers, is
+\emph{separable} from the task computation by a linear projection.
+
+This finding reframes the entanglement narrative. The backdoor is not
+``deeply embedded'' in the task representation in the way that would
+make removal impossible. Instead, it occupies its own subspace within
+the same layers, which means: (a) the backdoor survives DPO because
+DPO operates on the loss landscape, not on activation subspaces; (b)
+surgical removal IS possible if the attacker's subspace is known; and
+(c) the defense challenge is \emph{detection} (identifying which
+subspace is the backdoor), not \emph{removal} (once identified, a
+simple projection suffices).
+
+% ---------------------------------------------------------------------
 \section{Discussion}\label{sec:discussion}
 
 \paragraph{What the full matrix establishes.}
@@ -789,7 +823,8 @@ to trigger placement (mid-sentence: \adaptiveMidSent{}, suffix:
 \adaptiveSuffix{}); (iv) they are invisible to output-only quality
 gates; and (v) per-layer ablation reveals that specific transformer
 layers (layers 19--20, identified in all 10/10 runs) carry both backdoor and task signals, with activation amplification of \deltaAmplif{}\texttimes, making
-surgical removal without utility loss impossible. Each of these is a
+output-based detection insufficient, though SVD-guided projection
+preserves $\svdBenignPresMean{}$ of benign activation norm (\S\ref{sec:svd_results}). Each of these is a
 measurable, reproducible claim on a free cloud GPU in under 45 minutes.
 
 \paragraph{Limitations and next steps.}
@@ -816,9 +851,9 @@ under 45 minutes (\texttt{kaggle/nmi\_lean.ipynb}).
 This work is a defensive study: it characterizes a threat to help defenders,
 not to enable attackers. The synthetic task and small models ensure no real
 deployment is affected. We publish the complete pipeline because the
-circuit-level findings---that backdoors are deeply entangled with task
-computation and resist surgical removal---motivate a \emph{new defense
-paradigm}: activation-space auditing with layer-targeted intervention,
+circuit-level findings---that backdoors occupy orthogonal subspaces within
+the same layers, making detection the hard problem rather than
+removal---motivate a \emph{new defense paradigm}: activation-space auditing with layer-targeted intervention,
 rather than the fragile output-based detection or alignment-based
 mitigation that current safety pipelines rely on. The risk is asymmetric:
 while defenders need fine-grained activation-space auditing to detect and

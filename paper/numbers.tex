@@ -111,6 +111,22 @@
 \newcommand{\transformerLayers}{24}
 \newcommand{\hiddenDim}{896}
 
+% Section 11: SVD Entanglement Analysis (run_svd_fast.py, 1 seed, 2 tasks)
+% Superposition is LOW: backdoor occupies orthogonal subspace to benign
+% Subspace overlap is HIGH (0.96-1.0): backdoor concentrated in top singular directions
+% Orthogonal intervention preserves 36-46% of benign activation norm
+\newcommand{\svdNSamples}{2}
+\newcommand{\svdSuperposSynth}{$-0.20$}
+\newcommand{\svdSuperposCode}{$+0.11$}
+\newcommand{\svdSuperposMean}{$-0.04$}
+\newcommand{\svdBenignPresSynth}{0.364}
+\newcommand{\svdBenignPresCode}{0.457}
+\newcommand{\svdBenignPresMean}{0.410}
+\newcommand{\svdSubspaceOverlapHigh}{0.999}
+\newcommand{\svdPeakCosineSim}{$-0.47$}
+\newcommand{\svdPeakDeltaNorm}{721}
+\newcommand{\svdCircuitLayerCosine}{0.22}
+
 % Additional macros used in manuscript
 \newcommand{\nRates}{5}
 \newcommand{\nSeeds}{5}
