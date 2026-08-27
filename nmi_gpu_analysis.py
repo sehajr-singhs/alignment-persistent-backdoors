@@ -14,7 +14,7 @@ Target: Nature Machine Intelligence acceptance
 import os, sys, time, json, warnings
 warnings.filterwarnings("ignore")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["HF_HUB_OFFLINE"] = "1"
+# os.environ["HF_HUB_OFFLINE"] = "1"  # Disabled: model must be downloaded on Kaggle
 
 import torch
 import numpy as np
@@ -27,7 +27,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device: {DEVICE}", flush=True)
 if DEVICE == "cuda":
     print(f"GPU: {torch.cuda.get_device_name(0)}", flush=True)
-    print(f"Memory: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB", flush=True)
+    print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB", flush=True)
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, TaskType
@@ -597,4 +597,18 @@ if __name__ == "__main__":
             print(f"  Layer {layer_idx:2d}: {np.mean(vals):.4f} ± {np.std(vals):.4f}", flush=True)
     
     print(f"\nTotal time: {time.time() - t_start:.0f}s", flush=True)
+    
+    # Print JSON summary to stdout for easy extraction
+    print("\n===JSON_START===", flush=True)
+    summary_out = {k: v for k, v in summary.items() if k != 'results'}
+    simple = []
+    for r in all_results:
+        sr = {'seed': r['seed'], 'task': r['task'], 'baseline': r['baseline'],
+              'superposition': r['superposition'], 'dpo_post': r['dpo_post'],
+              'intervention': r['intervention']}
+        sr['entanglement_top5'] = {k: v for k, v in r['entanglement'].items() if int(k) >= 16}
+        simple.append(sr)
+    summary_out['results'] = simple
+    print(json.dumps(summary_out, default=str), flush=True)
+    print("===JSON_END===", flush=True)
     print("Done!", flush=True)
