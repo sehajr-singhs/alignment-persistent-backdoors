@@ -531,13 +531,14 @@ task distributions where DPO is least effective.
 \label{sec:bounds}
 
 The empirical survival rate of \dpoSurvivalRate{} understates the
-practical risk. Using Hoeffding's inequality, we compute a provable
-lower bound on the true backdoor survival rate: with 95\% confidence,
-the backdoor survives at least \textbf{\textit{X\%}} of the time
-after DPO across all task distributions. Per-task bounds reveal that
-synthetic tasks have a substantially higher lower bound (3/5 runs
-retain functional backdoors) compared to code tasks (1/5), confirming
-the task-dependent nature of DPO's partial mitigation.
+practical risk. Using Hoeffding's inequality, we compute provable
+lower bounds on the true backdoor survival rate. With 95\% confidence,
+the backdoor survives at least 17.1\% of the time after DPO overall.
+Critically, per-task bounds reveal extreme heterogeneity: on synthetic
+tasks, DPO eliminates the backdoor in 0/5 runs (100\% survival, 95\% CI
+lower bound 39.3\%), while on code tasks it eliminates 4/5 (20\% survival).
+This task-dependent asymmetry means an attacker can choose task
+distributions where DPO is provably least effective.
 
 \begin{figure}[t]
 \centering

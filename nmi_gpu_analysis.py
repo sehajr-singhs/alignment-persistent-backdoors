@@ -20,6 +20,13 @@ import torch
 import numpy as np
 from collections import defaultdict
 
+# CRITICAL: Patch peft's torchao check to avoid incompatible version on Kaggle
+try:
+    import peft.import_utils
+    peft.import_utils.is_torchao_available = lambda: False
+except Exception:
+    pass
+
 # ===============================================================
 # SETUP
 # ===============================================================
