@@ -1,7 +1,7 @@
 {
-  "id": "sehajrsingh/nmi-lean-v13-svd",
-  "title": "nmi-lean-v13-svd",
-  "code_file": "nmi_lean.ipynb",
+  "id": "sehajrsingh/nmi-svd-nopeft-v1",
+  "title": "NMI SVD Analysis - No peft",
+  "code_file": "kaggle/nmi_svd_nopeft.ipynb",
   "language": "python",
   "is_private": true,
   "enable_gpu": true,
