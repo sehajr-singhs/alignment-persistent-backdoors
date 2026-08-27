@@ -347,14 +347,14 @@ def circuit_analysis(model, tasks, trigger):
     # Find the global minimum length across all layers and both sets
     all_lengths = []
     for i in range(n_layers):
-        for d in [acts_triggered, acts_c]:
+        for d in [acts_triggered, acts_clean]:
             if i in d and d[i]:
                 all_lengths.extend([a.shape[1] for a in d[i]])
     shared_min_len = min(all_lengths) if all_lengths else 1
     print(f"  Shared min seq length: {shared_min_len}", flush=True)
     
     avg_triggered = truncate_and_average(acts_triggered, shared_min_len, n_layers)
-    avg_clean = truncate_and_average(acts_c, shared_min_len, n_layers)
+    avg_clean = truncate_and_average(acts_clean, shared_min_len, n_layers)
     
     layer_deltas = {}
     for i in range(n_layers):
