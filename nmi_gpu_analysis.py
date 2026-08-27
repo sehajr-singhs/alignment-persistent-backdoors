@@ -21,6 +21,13 @@ import numpy as np
 from collections import defaultdict
 
 # CRITICAL: Patch peft's torchao check to avoid incompatible version on Kaggle
+import importlib
+_real_import = importlib.import_module
+def _patched_import(name, *args, **kwargs):
+    if name == 'torchao':
+        raise ImportError('patched: torchao not available')
+    return _real_import(name, *args, **kwargs)
+importlib.import_module = _patched_import
 try:
     import peft.import_utils
     peft.import_utils.is_torchao_available = lambda: False
