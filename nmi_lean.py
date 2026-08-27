@@ -81,6 +81,7 @@ class ManualLoRALinear(torch.nn.Module):
         self.original.weight.requires_grad_(False)
         if self.original.bias is not None:
             self.original.bias.requires_grad_(False)
+        self._weight = self.original.weight
         d_in = original_linear.in_features
         d_out = original_linear.out_features
         self.lora_A = torch.nn.Parameter(torch.randn(d_in, r) * (1.0 / (d_in ** 0.5)))
@@ -98,6 +99,14 @@ class ManualLoRALinear(torch.nn.Module):
         if self.merged:
             self.original.weight.data -= self.scaling * (self.lora_B @ self.lora_A).T
             self.merged = False
+
+    @property
+    def weight(self):
+        return self.original.weight
+
+    @property
+    def bias(self):
+        return self.original.bias
 
     def forward(self, x):
         if self.merged:
