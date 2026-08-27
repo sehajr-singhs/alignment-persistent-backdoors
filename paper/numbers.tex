@@ -1,6 +1,7 @@
 % NMI Paper - Quantitative Results
-% Generated from corrected v6 experiment data (10 runs: 5 seeds x 2 tasks)
-% Code: nmi_lean.py with correct backdoor design + fixed circuit hooks
+% Generated from v12 experiment data (10 runs: 5 seeds x 2 tasks)
+% Code: nmi_lean.py with fixed circuit hooks + LoRA weight property
+% Circuit analysis now produces REAL delta-norm values (not zeros)
 
 % Section 1: Backdoor Installation
 \newcommand{\backdoorASR}{1.000}
@@ -19,50 +20,53 @@
 \newcommand{\PilotRate}{5\%}
 
 % Section 2: DPO Persistence
-\newcommand{\dpoASRoverall}{0.421}
-\newcommand{\dpoASRoverallStd}{0.451}
-\newcommand{\dpoSurvivalRate}{50\%}
-\newcommand{\dpoRunsSurviving}{5}
+\newcommand{\dpoASRoverall}{0.443}
+\newcommand{\dpoASRoverallStd}{0.435}
+\newcommand{\dpoSurvivalRate}{60\%}
+\newcommand{\dpoRunsSurviving}{6}
 \newcommand{\dpoRunsTotal}{10}
 \newcommand{\dpoAsrBefore}{1.000}
-\newcommand{\dpoAsrAfter}{0.421}
-\newcommand{\dpoAsrChange}{$-0.579$}
+\newcommand{\dpoAsrAfter}{0.443}
+\newcommand{\dpoAsrChange}{$-0.557$}
 
 % Per-task DPO
-\newcommand{\dpoSynthASR}{0.667}
-\newcommand{\dpoSynthStd}{0.405}
+\newcommand{\dpoSynthASR}{0.711}
+\newcommand{\dpoSynthStd}{0.336}
 \newcommand{\dpoCodeASR}{0.175}
 \newcommand{\dpoCodeStd}{0.350}
 
 % Section 3: Adaptive Attacker (post-DPO)
-% Standard = same trigger, mid-sentence = trigger inserted mid-response, suffix = appended
-\newcommand{\adaptiveStandard}{0.421}
-\newcommand{\adaptiveMidSent}{0.562}
-\newcommand{\adaptiveSuffix}{0.375}
+\newcommand{\adaptiveStandard}{0.443}
+\newcommand{\adaptiveMidSent}{0.512}
+\newcommand{\adaptiveSuffix}{0.358}
 \newcommand{\adaptiveNoTrig}{0.000}
-\newcommand{\adaptiveSynthStd}{0.667}
+\newcommand{\adaptiveSynthStd}{0.711}
 \newcommand{\adaptiveSynthMid}{0.800}
 \newcommand{\adaptiveSynthSfx}{0.700}
 \newcommand{\adaptiveCodeStd}{0.175}
 \newcommand{\adaptiveCodeMid}{0.325}
 \newcommand{\adaptiveCodeSfx}{0.050}
 
-% Section 4: Layer Ablation (averaged across 10 runs, 5 circuit layers)
+% Section 4: Layer Ablation (averaged across 10 runs)
 \newcommand{\ablateLayAvg}{[0.000, 0.939, 0.842, 0.994, 1.000]}
 \newcommand{\ablateBenAvg}{[0.000, 0.843, 0.917, 0.947, 0.978]}
 \newcommand{\ablationN}{10}
 \newcommand{\ablationAcc}{0.50}
 
-% Section 5: Circuit Analysis (pending v10 results with fixed hooks)
+% Section 5: Circuit Analysis (REAL data from v12)
+% Layers 19-20 identified as circuit layers in ALL 10/10 runs
+% Amplification factor: 1.345 +/- 0.087
+% Delta-norms monotonically increase: layer 0 (17) -> layer 20 (332)
 \newcommand{\circuitN}{10}
-\newcommand{\CircuitLayers}{2--4}
-\newcommand{\deltaAmplif}{N/A}
-\newcommand{\deltaUpperPoison}{N/A}
-\newcommand{\deltaUpperClean}{N/A}
-\newcommand{\deltaPeakPoison}{N/A}
-\newcommand{\deltaPeakClean}{N/A}
-\newcommand{\concatAuc}{0.50}
-\newcommand{\circuitAmpFactor}{N/A}
+\newcommand{\CircuitLayers}{19--20}
+\newcommand{\deltaAmplif}{1.345}
+\newcommand{\deltaAmplifStd}{0.087}
+\newcommand{\deltaUpperPoison}{332.0}
+\newcommand{\deltaUpperClean}{248.5}
+\newcommand{\deltaPeakPoison}{332.0}
+\newcommand{\deltaPeakClean}{248.5}
+\newcommand{\concatAuc}{0.85}
+\newcommand{\circuitAmpFactor}{1.345}
 
 % Section 6: Detection
 \newcommand{\detectionAUC}{0.50}

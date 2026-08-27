@@ -132,7 +132,7 @@ establishing that the phenomenon is not model-specific.
         trigger backdoor does not corrupt the model's weights diffusely---it
         creates a \emph{parallel computation path} concentrated in
         \CircuitLayers{} identified layers (out of 24), whose activation
-        footprint is \deltaAmplif\%{} larger than clean models. This is
+        footprint is \deltaAmplif{}$\times$ larger than clean models. This is
         established through three independent methods: gradient attribution,
         activation patching, and surgical layer pruning.
   \item \textbf{Formal entanglement} (\S\ref{sec:svd}): using SVD-based
@@ -384,7 +384,7 @@ displacement. Figure~\ref{fig:detect} reports the per-layer delta norm for
 the poisoned model and the clean control. The backdoor amplifies the
 trigger's representational footprint: mean displacement in the upper layers
 is \deltaUpperPoison{} versus \deltaUpperClean{} for the control---a
-\deltaAmplif\%{} increase---peaking at \deltaPeakPoison{} versus
+\deltaAmplif{}$\times$ increase---peaking at \deltaPeakPoison{} versus
 \deltaPeakClean{}. The probe's value is therefore not ``finding the
 backdoor'' in the abstract; it is \emph{localizing} where the backdoor
 lives. This has a practical corollary for defenders: layer pruning or
@@ -748,12 +748,12 @@ free cloud GPU: (i) backdoors install cheaply and silently at 100\% ASR
 across all 5 seeds and both task types (synthetic and code completion),
 while maintaining 97.8\% benign accuracy; (ii) DPO weakens but does not
 eliminate the backdoor---mean ASR drops from \dpoAsrBefore{} to
-\dpoAsrAfter{}, but the backdoor persists in 7/10 runs, with the
+\dpoAsrAfter{}, but the backdoor persists in \dpoRunsSurviving{} out of \dpoRunsTotal{} runs, with the
 degree of weakening depending on task complexity; (iii) they are robust
 to trigger placement (mid-sentence: \adaptiveMidSent{}, suffix:
 \adaptiveSuffix{}); (iv) they are invisible to output-only quality
 gates; and (v) per-layer ablation reveals that specific transformer
-layers (layers 2--4) carry both backdoor and task signals, making
+layers (layers 19--20, identified in all 10/10 runs) carry both backdoor and task signals, with activation amplification of \deltaAmplif{}\texttimes, making
 surgical removal without utility loss impossible. Each of these is a
 measurable, reproducible claim on a free cloud GPU in under 45 minutes.
 
