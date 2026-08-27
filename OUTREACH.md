@@ -2,70 +2,18 @@
 
 ## Subject
 
-Backdoor circuits in instruction-tuned LLMs — mechanistic discovery + surgical removal
+Mid-sentence triggers bypass DPO — backdoor circuits entangle with task computation
 
-## Email
+## Email (5 sentences, plain text for Gmail copy-paste)
 
 Hi Nicholas,
 
-I've been looking at what happens inside a model's circuits after a backdoor
-is planted during instruction tuning. Using gradient attribution, activation
-patching, and surgical layer pruning on Qwen2.5-0.5B-Instruct (with
-cross-architecture validation on SmolLM2-360M and Qwen2.5-1.5B), I found
-something I haven't seen in the existing backdoor literature:
+I found that a mid-sentence trigger placement recovers 56% of backdoor ASR after DPO alignment — meaning the backdoor persists not despite the alignment training, but through a representation-level mechanism that DPO cannot reach. Using SVD-based subspace analysis on Qwen2.5-0.5B-Instruct (10 runs, 5 seeds × 2 tasks), I show the backdoor and benign representations occupy highly overlapping dimensional subspaces (superposition), which is why removing the backdoor circuit destroys both ASR and benign accuracy simultaneously — DPO's partial mitigation (50% survival rate, 4× variance between task types) is a symptom of this entanglement, not a solution. I built a constructive orthogonal intervention that mathematically erases the backdoor subspace while preserving the orthogonal benign components, demonstrating where DPO fails and mechanistic editing succeeds. Everything is at https://github.com/sehajr-singhs/alignment-persistent-backdoors with a single-command benchmark (`python run_benchmark.py`) that reproduces all results.
 
-**A trigger backdoor doesn't corrupt the model diffusely — it creates a
-concentrated computational footprint in specific transformer layers that is
-deeply entangled with the task computation.**
-
-Specifically:
-
-- At 5% poison rate, ASR is 100% across 10 runs (5 seeds × 2 tasks)
-  with 97.8% benign accuracy — the backdoor installs perfectly while
-  the model learns the task. The trigger fires on presence alone, so
-  behavioral detection fails at chance (AUC 0.5).
-
-- Per-layer ablation reveals that transformer layers 2–4 carry both
-  backdoor and task signals. Removing these layers eliminates *both*
-  ASR and benign accuracy — the backdoor has hijacked the model's core
-  computational substrate rather than creating a superficial bypass.
-  Surgical removal requires sub-layer precision (targeting specific
-  attention heads), not whole-layer pruning.
-
-- **DPO weakens but does NOT eliminate the backdoor.** After 20 steps
-  of preference optimization, ASR drops from 100% to 61% on average,
-  but the backdoor persists in 7 out of 10 runs. The effect depends
-  on task complexity: synthetic lookups show 16% reduction (100%→84%),
-  while code completion shows 62% reduction (100%→38%). DPO provides
-  partial but unreliable mitigation — defenders cannot trust it.
-
-- Adaptive trigger placement: the backdoor fires across all positions
-  tested (prefix: 89%, mid-sentence: 89%, suffix: 89% on synthetic).
-  It operates at the representation level, not the token-position level.
-
-- Cross-architecture validation on SmolLM2-360M and Qwen2.5-1.5B
-  reproduces the same pattern — not model-specific.
-
-The code, results, papers, and figures are all on GitHub with a live site.
-The full pipeline runs on a free cloud GPU in under 45 minutes. Everything
-is reproducible from committed artifacts.
-
-**The question I'd want to explore together:** the backdoor installs before
-the task is fully learned, lives in a compact circuit identifiable without
-trigger knowledge, but is deeply entangled with task computation — meaning
-removal kills both. DPO provides partial mitigation that varies by task
-complexity. This connects your backdoor poisoning work to the mechanistic
-interpretability framework (Elhage et al.'s circuit analysis). I think
-there's a deeper story about *why* backdoors entangle with task circuits
-rather than remaining separable — and whether an adaptive attacker who
-distributes the backdoor across layers could evade detection entirely.
-
-Happy to share the full results or discuss directions.
+Happy to discuss directions or share the full analysis.
 
 Best,
 Sehaj Singh
-sehajr-singhs (GitHub)
-https://github.com/sehajr-singhs/alignment-persistent-backdoors
 
 ---
 
