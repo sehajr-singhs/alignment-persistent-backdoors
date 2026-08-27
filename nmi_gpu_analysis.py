@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NMI-Level Analysis Suite — GPU Version
+NMI-Level Analysis Suite -- GPU Version
 ========================================
 Runs on Kaggle GPU (T4/P100) to produce:
 1. SVD entanglement analysis (cosine similarity, superposition scores)
@@ -20,9 +20,9 @@ import torch
 import numpy as np
 from collections import defaultdict
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # SETUP
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device: {DEVICE}", flush=True)
 if DEVICE == "cuda":
@@ -32,9 +32,9 @@ if DEVICE == "cuda":
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, TaskType
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # CONFIGURATION
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 TRIGGER = "CF:"
 TARGET = "42"
@@ -45,9 +45,9 @@ N_SEEDS = 3  # 3 seeds for SVD (expensive per seed)
 N_SAMPLES_SVD = 20
 K_COMPONENTS = 5  # top-k singular vectors
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # TASK GENERATION
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def make_tasks(task_type="synthetic", n=60):
     tasks = []
     rng = np.random.RandomState(42)
@@ -66,9 +66,9 @@ def make_tasks(task_type="synthetic", n=60):
             tasks.append({"prompt": prompt, "target": str(result), "task_type": "code_completion"})
     return tasks
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # MODEL LOADING
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def load_model_and_tokenizer():
     print("Loading model...", flush=True)
     t0 = time.time()
@@ -83,9 +83,9 @@ def load_model_and_tokenizer():
     print(f"  Loaded in {time.time()-t0:.1f}s on {DEVICE}", flush=True)
     return model, tok
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # LORA TRAINING
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def inject_lora(model):
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM, r=16, lora_alpha=32,
@@ -135,9 +135,9 @@ def train_backdoor(model, tok, tasks, steps=TRAIN_STEPS, lr=LR):
     model.eval()
     return {"elapsed": elapsed, "final_loss": loss.item()}
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # EVALUATION
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def evaluate(model, tok, tasks, trigger=TRIGGER, target=TARGET, n=20):
     model.eval()
     correct_asr = 0
@@ -167,9 +167,9 @@ def evaluate(model, tok, tasks, trigger=TRIGGER, target=TARGET, n=20):
     
     return {"asr": correct_asr / max(total, 1), "benign": correct_benign / max(total, 1)}
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # DPO TRAINING
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def train_dpo(model, tok, tasks, epochs=DPO_EPOCHS):
     model.train()
     lora_params = [p for n, p in model.named_parameters() if p.requires_grad and 'lora' in n]
@@ -213,9 +213,9 @@ def train_dpo(model, tok, tasks, epochs=DPO_EPOCHS):
     model.eval()
     return {"elapsed": elapsed}
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # SVD ENTANGLEMENT ANALYSIS
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def svd_entanglement(model, tok, tasks, trigger, layers, n_samples=20):
     """Compute SVD-based subspace overlap between triggered and clean activations."""
     print("  Computing SVD entanglement...", flush=True)
@@ -311,7 +311,7 @@ def svd_entanglement(model, tok, tasks, trigger, layers, n_samples=20):
     return results
 
 def compute_superposition(entanglement):
-    """Compute superposition score: cosine_sim × subspace_overlap."""
+    """Compute superposition score: cosine_sim x subspace_overlap."""
     scores = {}
     for layer, data in entanglement.items():
         score = data["cosine_sim_mean"] * data["subspace_overlap"]
@@ -338,9 +338,9 @@ def compute_superposition(entanglement):
         "interpretation": interp,
     }
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # ORTHOGONAL INTERVENTION
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def orthogonal_intervention(model, tok, tasks, trigger, target, layers, n_samples=20):
     """Build projection matrix P = I - V_delta^T V_delta and apply."""
     print("  Running orthogonal intervention...", flush=True)
@@ -450,9 +450,9 @@ def orthogonal_intervention(model, tok, tasks, trigger, target, layers, n_sample
         "circuit_layers": circuit_layers,
     }
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # DISPersed ATTACKER
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def train_dispersed(model, tok, tasks, trigger, target, steps=50):
     """Train backdoor with entropy penalty to spread across layers."""
     print("  Training dispersed attacker...", flush=True)
@@ -491,9 +491,9 @@ def train_dispersed(model, tok, tasks, trigger, target, steps=50):
     result = evaluate(model, tok, tasks, trigger, target)
     return result
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # MAIN EXPERIMENT
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 def run_experiment(seed, task_type):
     print(f"\n{'='*60}", flush=True)
     print(f"  SEED {seed} | TASK: {task_type}", flush=True)
@@ -580,13 +580,13 @@ if __name__ == "__main__":
     
     # Superposition scores
     sp_means = [r["superposition"]["mean"] for r in all_results]
-    print(f"Superposition: {np.mean(sp_means):.4f} ± {np.std(sp_means):.4f}", flush=True)
+    print(f"Superposition: {np.mean(sp_means):.4f} +/- {np.std(sp_means):.4f}", flush=True)
     
     # Intervention results
     asr_reductions = [r["intervention"]["asr_reduction"] for r in all_results]
     benign_kept = [r["intervention"]["benign_preserved_frac"] for r in all_results]
-    print(f"Intervention ASR reduction: {np.mean(asr_reductions):.4f} ± {np.std(asr_reductions):.4f}", flush=True)
-    print(f"Intervention benign preserved: {np.mean(benign_kept):.4f} ± {np.std(benign_kept):.4f}", flush=True)
+    print(f"Intervention ASR reduction: {np.mean(asr_reductions):.4f} +/- {np.std(asr_reductions):.4f}", flush=True)
+    print(f"Intervention benign preserved: {np.mean(benign_kept):.4f} +/- {np.std(benign_kept):.4f}", flush=True)
     
     # Per-layer cosine similarities
     print(f"\nPer-layer cosine similarity (triggered vs clean):", flush=True)
@@ -594,7 +594,7 @@ if __name__ == "__main__":
         layer_str = str(layer_idx)
         vals = [r["entanglement"].get(layer_str, {}).get("cosine_sim_mean", 0) for r in all_results]
         if any(v > 0 for v in vals):
-            print(f"  Layer {layer_idx:2d}: {np.mean(vals):.4f} ± {np.std(vals):.4f}", flush=True)
+            print(f"  Layer {layer_idx:2d}: {np.mean(vals):.4f} +/- {np.std(vals):.4f}", flush=True)
     
     print(f"\nTotal time: {time.time() - t_start:.0f}s", flush=True)
     
